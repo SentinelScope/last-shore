@@ -250,7 +250,7 @@ function resolveCook(state: SaveState, now: number): SaveState {
     return { ...state, activity: null };
   }
 
-  let next = syncFireplace(state, now);
+  const next = syncFireplace(state, now);
   const slotIndex = activity.cookSlotIndex;
   const foodSlots = [...next.fireplace.slots.food];
   const current = foodSlots[slotIndex];

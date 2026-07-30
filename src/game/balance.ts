@@ -68,13 +68,8 @@ export const LOCK_HINT: Record<StorageTierId, string> = {
   storage: "Full",
 };
 
-/** Starting kit for a new run. */
-export const STARTING_INVENTORY: { itemId: string; qty: number }[] = [
-  { itemId: "stone", qty: 2 },
-  { itemId: "wood", qty: 5 },
-  { itemId: "plant_fiber", qty: 2 },
-  { itemId: "coconut", qty: 1 },
-];
+/** Starting kit for a new run — empty by default. */
+export const STARTING_INVENTORY: { itemId: string; qty: number }[] = [];
 
 export const HOTSPOT_IDLE_MS = 10_000;
 

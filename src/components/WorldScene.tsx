@@ -79,6 +79,8 @@ export const WorldScene = memo(function WorldScene(props: WorldSceneProps) {
     if (!svg) return;
     svg.setAttribute("class", worldClassName(props));
     setCupFill(svg, props.hasWater ? props.waterLevel : 0);
+    // Intentionally depend on scene fields, not the whole props object.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     props.dayPart,
     props.weather,

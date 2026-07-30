@@ -36,6 +36,10 @@ describe("activities", () => {
 
   it("cut yields wood from bare stone", () => {
     let state = createNewRun(1_000_000);
+    state = {
+      ...state,
+      inventory: [{ itemId: "stone", qty: 1 }],
+    };
     state = startActivity(state, "cut", "5m", 1_000_000);
     expect(state.activity?.tool).toBe("bare");
     const done = resolveActivityIfDue(state, state.activity!.endsAt);

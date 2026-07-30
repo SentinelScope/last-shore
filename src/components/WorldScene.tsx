@@ -77,7 +77,10 @@ export const WorldScene = memo(function WorldScene(props: WorldSceneProps) {
     if (!injected.current) return;
     const svg = hostRef.current?.querySelector("svg.scene");
     if (!svg) return;
-    svg.setAttribute("class", worldClassName(props));
+    const nextClass = worldClassName(props);
+    if (svg.getAttribute("class") !== nextClass) {
+      svg.setAttribute("class", nextClass);
+    }
     setCupFill(svg, props.hasWater ? props.waterLevel : 0);
     // Intentionally depend on scene fields, not the whole props object.
     // eslint-disable-next-line react-hooks/exhaustive-deps

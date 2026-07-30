@@ -74,9 +74,18 @@
   overflow:hidden;
   background:#0E1218;
   color:#EDE7DD;
-  -webkit-font-smoothing:antialiased
+  -webkit-font-smoothing:antialiased;
+  /* Stable compositing layer — HUD ticks must not flash the SVG on mobile */
+  transform:translateZ(0);
+  isolation:isolate;
+  -webkit-backface-visibility:hidden;
+  backface-visibility:hidden
 }
-.world-host{position:absolute;inset:0;z-index:0;pointer-events:none}
+.world-host{
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+  transform:translateZ(0);
+  contain:paint
+}
 .world-host svg.scene{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 @media(min-width:430px) and (min-height:900px){
   .phone{
@@ -88,7 +97,13 @@
 }
 svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 
-.grain{position:absolute;inset:0;opacity:.09;mix-blend-mode:overlay;pointer-events:none}
+.grain{
+  position:absolute;inset:0;opacity:.05;pointer-events:none;
+  /* No mix-blend-mode — overlay + SVG turbulence blacks out on mobile GPUs */
+}
+@media (hover: none), (pointer: coarse){
+  .grain{display:none}
+}
 .vignette{position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(125% 78% at 50% 40%,transparent 40%,rgba(8,10,14,.55) 100%)}
 

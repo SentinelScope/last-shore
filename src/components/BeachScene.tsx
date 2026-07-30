@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import {
   activityChipLabel,
   clearPendingResults,
@@ -47,7 +47,7 @@ import {
   placeWaterContainer,
   waterFillLabel,
 } from "@/game/water";
-import { setMuted, setWeatherTrack } from "@/game/audio";
+import { playSfx, setMuted, setNightAmbience, setWeatherTrack } from "@/game/audio";
 import { weatherAt } from "@/game/weather";
 import { BeachCrate } from "./BeachCrate";
 import { ContainerPanel } from "./ContainerPanel";
@@ -93,13 +93,25 @@ function Vital({
   );
 }
 
+/** Isolated so 1 Hz HUD ticks don't recreate SVG turbulence. */
+const GrainOverlay = memo(function GrainOverlay() {
+  return (
+    <svg className="grain" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <filter id="n">
+        <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="3" />
+      </filter>
+      <rect width="100%" height="100%" filter="url(#n)" />
+    </svg>
+  );
+});
+
 function deriveSceneProps(save: SaveState, now: number): WorldSceneProps {
   const dayPart = dayPartAt(now);
   const weather = weatherAt(save.seed, save.runStartedAt, now);
   const pose = poseFor(dayPart, weather);
   const hasWater = !!save.waterSpot.itemId;
   const waterLevel = hasWater
-    ? Math.round(currentWaterFill(save, now))
+    ? Math.round(currentWaterFill(save, now) / 5) * 5
     : 0;
   return {
     dayPart,
@@ -146,6 +158,8 @@ export function BeachScene() {
   const phoneRef = useRef<HTMLDivElement>(null);
   const saveRef = useRef<SaveState | null>(null);
   const weatherTrackRef = useRef<string | null>(null);
+  const nightTrackRef = useRef<boolean | null>(null);
+  const resultsSfxRef = useRef(false);
 
   function commitSave(next: SaveState, tick = Date.now()) {
     const weather = weatherAt(next.seed, next.runStartedAt, tick);
@@ -224,10 +238,24 @@ export function BeachScene() {
 
   useEffect(() => {
     if (!sceneProps) return;
-    if (weatherTrackRef.current === sceneProps.weather) return;
-    weatherTrackRef.current = sceneProps.weather;
-    setWeatherTrack(sceneProps.weather);
+    if (weatherTrackRef.current !== sceneProps.weather) {
+      weatherTrackRef.current = sceneProps.weather;
+      setWeatherTrack(sceneProps.weather);
+    }
+    const nightOn = sceneProps.dayPart === "night";
+    if (nightTrackRef.current !== nightOn) {
+      nightTrackRef.current = nightOn;
+      setNightAmbience(nightOn);
+    }
   }, [sceneProps]);
+
+  useEffect(() => {
+    const open = !!save?.pendingResults;
+    if (open && !resultsSfxRef.current) {
+      playSfx("activity_complete");
+    }
+    resultsSfxRef.current = open;
+  }, [save?.pendingResults]);
 
   const hideHotspots = useCallback(() => {
     setRevealed(false);
@@ -424,6 +452,7 @@ export function BeachScene() {
 
   function openItems(e: React.MouseEvent) {
     e.stopPropagation();
+    playSfx("items");
     setItemsOpen(true);
     setCraftOpen(false);
     setDiaryOpen(false);
@@ -438,6 +467,7 @@ export function BeachScene() {
 
   function openCraft(e: React.MouseEvent) {
     e.stopPropagation();
+    playSfx("build");
     setCraftOpen(true);
     setItemsOpen(false);
     setDiaryOpen(false);
@@ -452,6 +482,7 @@ export function BeachScene() {
 
   function openDiary(e: React.MouseEvent) {
     e.stopPropagation();
+    playSfx("diary");
     setDiaryOpen(true);
     setItemsOpen(false);
     setCraftOpen(false);
@@ -592,12 +623,7 @@ export function BeachScene() {
     <div className="phone" ref={phoneRef} onClick={onPhonePointer}>
       <WorldScene {...sceneProps} />
 
-      <svg className="grain" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-        <filter id="n">
-          <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="3" />
-        </filter>
-        <rect width="100%" height="100%" filter="url(#n)" />
-      </svg>
+      <GrainOverlay />
       <div className="vignette" />
 
       {view.beach && (
@@ -730,9 +756,6 @@ export function BeachScene() {
       <DiarySheet
         open={diaryOpen}
         onClose={() => setDiaryOpen(false)}
-        onOpened={() => {
-          // Hook for page-flip SFX once audio (item 8) is in.
-        }}
       />
 
       <YouSheet

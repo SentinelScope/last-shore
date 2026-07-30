@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Mobile viewport: size to the *visible* area (URL bar + home indicator), not the
+  large layout viewport. 100% / 100vh often overflow and clip the dock.
+*/
+html {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  height: 100svh;
+  height: -webkit-fill-available;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  height: 100svh;
+  height: -webkit-fill-available;
+  max-height: 100svh;
+  max-height: -webkit-fill-available;
+  background: #0b0d11;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  font-family: var(--font-body), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Desktop: keep the phone frame centered and capped */
+@media (min-width: 430px) and (min-height: 900px) {
+  body {
+    align-items: center;
+  }
+}

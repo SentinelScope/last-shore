@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs><radialGradient id="gl" cx=".5" cy=".5" r=".5">
+<stop offset="0" stop-color="#7FE3C4" stop-opacity=".8"/>
+<stop offset="1" stop-color="#7FE3C4" stop-opacity="0"/></radialGradient></defs>
+<ellipse cx="32" cy="32" rx="30" ry="24" fill="url(#gl)"/>
+<g transform="rotate(-32 32 32)">
+<rect x="26" y="12" width="12" height="40" rx="6" fill="#1E6E62"/>
+<rect x="26" y="12" width="5.5" height="40" rx="2.8" fill="#3FAF97"/>
+<rect x="28.5" y="16" width="7" height="32" rx="3.5" fill="#7FE3C4"/>
+<rect x="29.5" y="19" width="2.6" height="26" rx="1.3" fill="#F2EDE3" opacity=".75"/>
+<rect x="24" y="8" width="16" height="7" rx="2" fill="#7B848C"/>
+<rect x="24" y="8" width="7" height="7" rx="2" fill="#B2B8BE"/>
+<rect x="24" y="49" width="16" height="7" rx="2" fill="#7B848C"/>
+<rect x="24" y="49" width="7" height="7" rx="2" fill="#B2B8BE"/></g>
+<g fill="#7FE3C4"><circle cx="14" cy="18" r="1.6" opacity=".8"/>
+<circle cx="52" cy="46" r="1.3" opacity=".7"/><circle cx="48" cy="16" r="1.1" opacity=".6"/></g></svg>

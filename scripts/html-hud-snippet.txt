@@ -1,0 +1,25 @@
+﻿  <div class="stamp"><div class="day">Day 14</div><div class="sub" id="sub">Golden hour Â· clear</div></div>
+  <div class="vitals">
+    <div class="vital"><div class="track"><div class="fill" style="height:34%"></div></div><span>W</span></div>
+    <div class="vital"><div class="track"><div class="fill" style="height:61%"></div></div><span>F</span></div>
+    <div class="vital"><div class="track"><div class="fill" style="height:78%"></div></div><span>H</span></div>
+    <div class="vital low"><div class="track"><div class="fill" style="height:22%"></div></div><span>R</span></div>
+  </div>
+
+  <button class="spot s-horizon" data-t="Horizon" data-d="Nothing on the water. Sit a while and keep watching." data-a="Watch"></button>
+  <button class="spot s-shore" data-t="Tideline" data-d="A crate came in on the last tide. Four planks, one tin." data-a="Collect"></button>
+  <button class="spot s-palm" data-t="Palm grove" data-d="Four trunks standing. Your axe has three swings left in it." data-a="Chop"></button>
+  <button class="spot s-water" data-t="Water collection" data-d="Coconut cup, 18 of 25%. Rain adds 1% every five minutes; a storm adds 3% a minute. It never evaporates." data-a="Drink"></button>
+  <button class="spot s-fire" data-t="Fire" data-d="Burns for two more hours. Warm enough to sleep by." data-a="Feed it"></button>
+  <button class="spot s-hut" data-t="Lean-to Â· level 1" data-d="Keeps the rain off. Add six planks for walls." data-a="Build"></button>
+  <button class="spot s-you" data-t="You" data-d="Salt in your hair, sand in everything. Day fourteen." data-a="Change clothes"></button>
+
+  <div class="caption" id="cap"><h2 id="capT"></h2><p id="capD"></p><button class="act" id="capA"></button></div>
+
+  <nav class="dock">
+    <button class="tool" id="diaryBtn"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg><em>Diary</em></button>
+    <button class="tool" id="itemsBtn"><svg viewBox="0 0 24 24"><path d="M3 8l9-4 9 4v8l-9 4-9-4z"/><path d="M3 8l9 4 9-4M12 12v8"/></svg><em>Items</em><i></i></button>
+    <button class="tool"><svg viewBox="0 0 24 24"><path d="M4 20l8-16 8 16z"/><path d="M8 20l4-8 4 8"/></svg><em>Build</em></button>
+    <button class="tool"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 20c1-4 4-6 7-6s6 2 7 6"/></svg><em>You</em></button>
+  </nav>
+</div>

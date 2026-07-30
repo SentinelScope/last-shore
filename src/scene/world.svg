@@ -1,0 +1,440 @@
+<svg class="scene world t-golden w-clear" id="world" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice"
+     aria-label="An elevated view across a small island beach toward the sea, with palms, a fire, a shelter and the castaway.">
+  <defs>
+    <linearGradient id="g-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--sky-top)"/><stop offset=".55" stop-color="var(--sky-mid)"/>
+      <stop offset="1" stop-color="var(--sky-low)"/>
+    </linearGradient>
+    <radialGradient id="g-sunglow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#FFE2B8" stop-opacity=".9"/><stop offset="1" stop-color="#FFE2B8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g-fire" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#FFAF54" stop-opacity=".7"/><stop offset=".45" stop-color="#E4763F" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#E4763F" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="clip-sea"><rect y="300" width="390" height="230"/></clipPath>
+    <filter id="blur6"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="blur14"><feGaussianBlur stdDeviation="14"/></filter>
+
+    <!-- one frond: broad blade, three soft lobes per side, rounded tip.
+         symmetric about its own x-axis, so it just gets rotated around the crown -->
+    <g id="frond">
+      <path fill="var(--veg-mid)" d="M0 0C12 12 22 20 34 21L36 11C48 21 58 25 68 24L68 12C78 20 86 16 92 7L96 0Z"/>
+      <path fill="var(--veg-lit)" d="M0 0C12 -12 22 -20 34 -21L36 -11C48 -21 58 -25 68 -24L68 -12C78 -20 86 -16 92 -7L96 0Z"/>
+      <path stroke="var(--veg-dark)" stroke-width="1.6" opacity=".3" d="M2 0L94 0"/>
+    </g>
+    <g id="frond-b">
+      <path fill="var(--veg-dark)" d="M0 0C12 12 22 20 34 21L36 11C48 21 58 25 68 24L68 12C78 20 86 16 92 7L96 0Z"/>
+      <path fill="var(--veg-mid)" d="M0 0C12 -12 22 -20 34 -21L36 -11C48 -21 58 -25 68 -24L68 -12C78 -20 86 -16 92 -7L96 0Z"/>
+    </g>
+
+    <!-- the character, origin at the feet, so poses can just place and rotate him -->
+    <g id="stander">
+      <polygon points="2,-29 8,-30 8,-16 6,-5 2,-1 0,-7 0,-19" fill="var(--cloth)" opacity=".72"/>
+      <polygon points="0,-3 7,-3 8,1 -1,1" fill="var(--skin)" opacity=".7"/>
+      <polygon points="-7,-28 0,-29 0,-17 -2,-5 -3,0 -8,0 -8,-12 -8,-20" fill="var(--cloth)"/>
+      <polygon points="-9,-2 -2,-2 -1,2 -10,2" fill="var(--skin)" opacity=".85"/>
+      <polygon points="-8,-53 0,-56 8,-53 10,-43 7,-34 4,-27 -3,-27 -6,-34 -9,-43" fill="var(--cloth)"/>
+      <polygon points="0,-56 8,-53 10,-43 7,-34 4,-27 1,-27 2,-43" fill="var(--cloth)" opacity=".74"/>
+      <polygon points="-9,-52 -6,-50 -8,-40 -10,-31 -13,-32 -12,-42" fill="var(--skin)"/>
+      <polygon points="8,-51 11,-52 12,-42 11,-31 8,-31 9,-41" fill="var(--skin)" opacity=".8"/>
+      <polygon points="-3,-61 3,-61 4,-55 -4,-55" fill="var(--skin)" opacity=".9"/>
+      <polygon points="-4,-77 1,-79 6,-76 8,-71 7,-65 3,-61 -2,-61 -6,-65 -7,-71" fill="var(--skin)"/>
+      <polygon points="1,-79 6,-76 8,-71 7,-65 3,-61 1,-61" fill="var(--skin)" opacity=".72"/>
+      <polygon points="-7,-70 -5,-76 0,-80 6,-77 9,-71 6,-73 1,-75 -4,-73" fill="var(--wood-dark)"/>
+    </g>
+  </defs>
+
+  <!-- ================= SKY ================= -->
+  <rect width="390" height="310" fill="url(#g-sky)"/>
+  <g class="stars" fill="#EAF0F5">
+    <circle cx="44" cy="52" r="1.1"/><circle cx="118" cy="28" r=".9"/><circle cx="188" cy="70" r=".8"/>
+    <circle cx="246" cy="38" r="1"/><circle cx="316" cy="62" r=".9"/><circle cx="352" cy="118" r=".8"/>
+    <circle cx="82" cy="126" r=".8"/><circle cx="272" cy="148" r=".7"/><circle cx="150" cy="160" r=".7"/>
+  </g>
+
+  <!-- sun / moon, one per state -->
+  <g class="lightsource">
+    <circle cx="288" cy="126" r="86" fill="url(#g-sunglow)" opacity="var(--sunglow-op)"/>
+    <circle cx="288" cy="126" r="19" fill="#FFEBC8" opacity="var(--sunglow-op)"/>
+    <g opacity="var(--star-op)"><circle cx="288" cy="118" r="15" fill="#DDE6EE"/>
+      <circle cx="281" cy="112" r="3" fill="#C2CEDA" opacity=".6"/><circle cx="293" cy="124" r="2.2" fill="#C2CEDA" opacity=".5"/></g>
+  </g>
+
+  <!-- faceted cloud banks -->
+  <g class="cloudbank" opacity=".55">
+    <polygon points="-30,96 30,80 84,92 122,84 150,100 96,112 22,110" fill="#FFFFFF" opacity=".5"/>
+    <polygon points="-30,96 30,80 84,92 60,100 12,102" fill="#FFFFFF" opacity=".35"/>
+  </g>
+  <g class="cloudbank slow" opacity=".45">
+    <polygon points="210,152 268,138 318,150 372,142 400,158 300,170 232,166" fill="#FFFFFF" opacity=".45"/>
+    <polygon points="210,152 268,138 318,150 288,158 234,160" fill="#FFFFFF" opacity=".3"/>
+  </g>
+  <!-- cloud deck: colour and opacity are driven by the weather state -->
+  <g class="stormdeck" opacity="0">
+    <polygon points="-20,0 410,0 410,140 330,158 240,132 150,156 60,130 -20,150" fill="var(--deck)" opacity=".62"/>
+    <polygon points="-20,0 410,0 410,96 320,112 210,90 110,110 -20,98" fill="var(--deck)" opacity=".5"/>
+  </g>
+
+  <!-- birds: two passes, offset in time -->
+  <g class="birds" fill="none" stroke="#2E3A44" stroke-width="1.5" stroke-linecap="round" opacity=".75">
+    <g>
+      <path d="M0 0q4.5 -4 9 0M9 0q4.5 -4 9 0">
+        <animate attributeName="d" values="M0 0q4.5 -4 9 0M9 0q4.5 -4 9 0;M0 0q4.5 2 9 0M9 0q4.5 2 9 0;M0 0q4.5 -4 9 0M9 0q4.5 -4 9 0" dur=".8s" repeatCount="indefinite"/>
+      </path>
+      <path d="M22 10q3.5 -3 7 0M29 10q3.5 -3 7 0" opacity=".7">
+        <animate attributeName="d" values="M22 10q3.5 -3 7 0M29 10q3.5 -3 7 0;M22 10q3.5 1.5 7 0M29 10q3.5 1.5 7 0;M22 10q3.5 -3 7 0M29 10q3.5 -3 7 0" dur=".95s" repeatCount="indefinite"/>
+      </path>
+      <animateTransform attributeName="transform" type="translate" values="-60 90;450 128" dur="16s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;.75;.75;0" keyTimes="0;.08;.9;1" dur="16s" repeatCount="indefinite"/>
+    </g>
+    <g>
+      <path d="M0 0q4 -3.5 8 0M8 0q4 -3.5 8 0">
+        <animate attributeName="d" values="M0 0q4 -3.5 8 0M8 0q4 -3.5 8 0;M0 0q4 2 8 0M8 0q4 2 8 0;M0 0q4 -3.5 8 0M8 0q4 -3.5 8 0" dur=".7s" repeatCount="indefinite"/>
+      </path>
+      <animateTransform attributeName="transform" type="translate" values="440 176;-60 148" dur="23s" begin="7s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;.6;.6;0" keyTimes="0;.1;.88;1" dur="23s" begin="7s" repeatCount="indefinite"/>
+    </g>
+  </g>
+
+  <!-- ================= SEA ================= -->
+  <rect y="300" width="390" height="232" fill="var(--sea-far)"/>
+  <g clip-path="url(#clip-sea)">
+    <polygon points="-10,340 130,332 250,344 400,334 400,400 -10,404" fill="var(--sea-mid)"/>
+    <polygon points="-10,398 100,392 210,406 330,394 400,404 400,470 -10,474" fill="var(--sea-shal)"/>
+    <polygon points="60,436 168,428 262,442 340,432 390,444 390,500 40,496" fill="var(--sea-glass)" opacity=".55"/>
+    <!-- shimmer bands -->
+    <g fill="#FFFFFF" opacity=".18">
+      <rect x="120" y="356" width="90" height="2" rx="1"><animate attributeName="opacity" values=".1;.5;.1" dur="6s" repeatCount="indefinite"/></rect>
+      <rect x="230" y="382" width="120" height="2" rx="1"><animate attributeName="opacity" values=".45;.1;.45" dur="8s" repeatCount="indefinite"/></rect>
+      <rect x="60" y="414" width="140" height="2.5" rx="1.2"><animate attributeName="opacity" values=".15;.55;.15" dur="7s" repeatCount="indefinite"/></rect>
+      <rect x="200" y="452" width="150" height="2.5" rx="1.2"><animate attributeName="opacity" values=".5;.12;.5" dur="9s" repeatCount="indefinite"/></rect>
+    </g>
+  </g>
+
+  <!-- horizon: open ocean, nothing on it -->
+
+  <!-- boulders in the water -->
+  <g>
+    <polygon points="238,404 258,386 282,392 292,414 262,424 240,418" fill="var(--rock-dark)"/>
+    <polygon points="258,386 282,392 292,414 268,406" fill="var(--rock-lit)"/>
+    <ellipse cx="264" cy="424" rx="30" ry="6" fill="var(--foam)" opacity=".5">
+      <animate attributeName="rx" values="30;34;30" dur="7s" repeatCount="indefinite"/></ellipse>
+
+    <polygon points="316,446 334,432 356,440 360,460 330,466 314,458" fill="var(--rock-dark)"/>
+    <polygon points="334,432 356,440 360,460 338,452" fill="var(--rock-lit)"/>
+    <ellipse cx="336" cy="466" rx="28" ry="6" fill="var(--foam)" opacity=".45">
+      <animate attributeName="rx" values="28;32;28" dur="9s" repeatCount="indefinite"/></ellipse>
+
+    <polygon points="150,432 164,422 180,428 184,442 162,448 148,442" fill="var(--rock-dark)"/>
+    <polygon points="164,422 180,428 184,442 166,436" fill="var(--rock-lit)"/>
+  </g>
+
+  <!-- sandbar spit -->
+  <polygon points="176,452 232,442 274,452 250,470 190,470" fill="var(--sand-mid)" opacity=".85"/>
+  <polygon points="176,452 232,442 274,452 236,458 196,458" fill="var(--sand-lit)" opacity=".7"/>
+
+  <!-- ================= SHORE ================= -->
+  <path d="M-10 486q70 22 150 16t120 12 140 -14v70H-10z" fill="var(--foam)" opacity=".85"/>
+  <path d="M-10 492q70 22 150 16t120 12 140 -14v66H-10z" fill="var(--sand-shad)" opacity=".55"/>
+  <g class="splash" fill="var(--foam)" opacity=".5">
+    <ellipse cx="90" cy="520" rx="10" ry="2"><animate attributeName="rx" values="2;12;2" dur="1.4s" repeatCount="indefinite"/><animate attributeName="opacity" values=".6;0" dur="1.4s" repeatCount="indefinite"/></ellipse>
+    <ellipse cx="250" cy="536" rx="9" ry="2"><animate attributeName="rx" values="2;11;2" dur="1.1s" begin=".4s" repeatCount="indefinite"/><animate attributeName="opacity" values=".55;0" dur="1.1s" begin=".4s" repeatCount="indefinite"/></ellipse>
+    <ellipse cx="330" cy="512" rx="8" ry="2"><animate attributeName="rx" values="2;10;2" dur="1.6s" begin=".8s" repeatCount="indefinite"/><animate attributeName="opacity" values=".5;0" dur="1.6s" begin=".8s" repeatCount="indefinite"/></ellipse>
+  </g>
+
+  <!-- ================= BEACH ================= -->
+  <path d="M-10 514q80 26 170 20t230 -18v340H-10z" fill="var(--sand-mid)"/>
+  <polygon points="-10,560 130,548 280,566 400,548 400,640 -10,656" fill="var(--sand-lit)"/>
+  <polygon points="-10,656 120,644 250,668 400,650 400,760 -10,776" fill="var(--sand-mid)"/>
+  <polygon points="-10,776 150,762 300,784 400,768 400,860 -10,860" fill="var(--sand-shad)"/>
+
+  <!-- long cast shadows from the palms, raking toward camera -->
+  <g fill="#2C2A2E" opacity="var(--shadow-op)" filter="url(#blur6)">
+    <polygon points="30,700 62,700 178,844 88,844"/>
+    <polygon points="100,662 124,662 214,806 154,824"/>
+    <polygon points="348,592 364,592 400,700 380,712"/>
+  </g>
+
+  <!-- ================= MID-GROUND PROPS ================= -->
+  <!-- shelter, right — shown after Lean-to -->
+  <g class="shelter">
+    <ellipse cx="308" cy="668" rx="52" ry="10" fill="#2C2A2E" opacity="var(--shadow-op)" filter="url(#blur6)"/>
+    <polygon points="262,660 292,600 348,608 340,668" fill="var(--wood-dark)"/>
+    <polygon points="292,600 348,608 340,668 318,656" fill="var(--wood-lit)"/>
+    <polygon points="262,660 292,600 300,606 272,664" fill="var(--veg-dark)" opacity=".7"/>
+    <rect x="266" y="638" width="70" height="3" fill="var(--wood-dark)" opacity=".5" transform="rotate(-6 266 638)"/>
+    <rect x="270" y="650" width="66" height="3" fill="var(--wood-dark)" opacity=".4" transform="rotate(-6 270 650)"/>
+    <polygon points="344,610 356,626 350,668 340,668" fill="var(--wood-dark)" opacity=".9"/>
+  </g>
+
+  <!-- crate + drying rack -->
+  <g>
+    <polygon points="230,712 254,704 268,712 244,722" fill="var(--wood-lit)"/>
+    <polygon points="230,712 244,722 244,738 230,728" fill="var(--wood-dark)"/>
+    <polygon points="244,722 268,712 268,728 244,738" fill="var(--wood-lit)" opacity=".75"/>
+    <ellipse cx="248" cy="740" rx="24" ry="5" fill="#2C2A2E" opacity="var(--shadow-op)" filter="url(#blur6)"/>
+  </g>
+  <g stroke="var(--wood-dark)" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".9">
+    <path d="M336 700l-6 26M366 704l6 26M334 700h34"/>
+    <path d="M342 702v10M352 703v10M362 704v10" stroke-width="1.6" opacity=".6"/>
+  </g>
+
+  <!-- grass tufts -->
+  <g stroke="var(--veg-mid)" stroke-width="2" stroke-linecap="round" fill="none">
+    <path d="M62 780q3 -12 8 -16M68 782q0 -14 6 -18M74 782q3 -12 10 -14" opacity=".9"/>
+    <path d="M296 754q3 -10 8 -13M302 756q0 -12 5 -15" opacity=".8"/>
+    <path d="M172 706q2 -9 7 -11M178 708q0 -10 4 -12" opacity=".7"/>
+  </g>
+
+  <!-- ================= THE CASTAWAY ================= -->
+  <g id="poses">
+    <!-- standing at the waterline, watching -->
+    <g class="pose p-stare">
+      <ellipse class="fireshadow" cx="197" cy="654" rx="19" ry="4.5" fill="#2C2A2E" opacity="var(--shadow-op)" filter="url(#blur6)"/>
+      <use href="#stander" transform="translate(197,653)"/>
+    </g>
+
+    <!-- leaning on the big palm -->
+    <g class="pose p-lean">
+      <ellipse cx="66" cy="694" rx="18" ry="4.5" fill="#2C2A2E" opacity="var(--shadow-op)" filter="url(#blur6)"/>
+      <use href="#stander" transform="translate(66,693) rotate(-11)"/>
+    </g>
+
+    <!-- fishing off the wet sand -->
+    <g class="pose p-fish">
+      <ellipse cx="234" cy="517" rx="13" ry="3.2" fill="#2C2A2E" opacity="var(--shadow-op)" filter="url(#blur6)"/>
+      <use href="#stander" transform="translate(234,516) scale(.76)"/>
+      <path d="M241 480L272 452" stroke="var(--wood-dark)" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+      <path d="M272 452L279 490" stroke="var(--foam)" stroke-width=".8" opacity=".7" fill="none"/>
+      <ellipse cx="279" cy="492" rx="6" ry="1.6" fill="var(--foam)" opacity=".5">
+        <animate attributeName="rx" values="3;8;3" dur="3.4s" repeatCount="indefinite"/></ellipse>
+    </g>
+
+    <!-- sitting by the fire, knees up -->
+    <g class="pose p-fire">
+      <ellipse class="fireshadow" cx="172" cy="718" rx="22" ry="5" fill="#2C2A2E" opacity="var(--shadow-op)" filter="url(#blur6)"/>
+      <polygon points="176,700 179,712 160,710 158,699" fill="var(--cloth)"/>
+      <polygon points="160,710 158,699 149,708 152,716" fill="var(--cloth)" opacity=".76"/>
+      <polygon points="146,712 156,712 156,717 145,717" fill="var(--skin)" opacity=".8"/>
+      <polygon points="170,706 181,704 185,688 179,681 172,683 167,697" fill="var(--cloth)"/>
+      <polygon points="179,681 185,688 181,704 176,705 178,690" fill="var(--cloth)" opacity=".72"/>
+      <polygon points="181,690 186,692 191,706 187,709 183,698" fill="var(--skin)" opacity=".85"/>
+      <polygon points="173,678 178,676 182,679 184,684 182,689 178,691 173,690 170,685" fill="var(--skin)"/>
+      <polygon points="178,676 182,679 184,684 182,689 178,691 177,691" fill="var(--skin)" opacity=".72"/>
+      <polygon points="170,684 172,678 177,675 183,678 185,683 181,681 176,680 172,682" fill="var(--wood-dark)"/>
+    </g>
+
+    <!-- sitting under the lean-to, out of the weather -->
+    <g class="pose p-hut" transform="translate(-30,34)">
+      <ellipse cx="302" cy="663" rx="18" ry="4" fill="#2C2A2E" opacity="var(--shadow-op)" filter="url(#blur6)"/>
+      <polygon points="300,646 303,658 283,659 282,649" fill="var(--cloth)"/>
+      <polygon points="280,657 288,657 288,661 279,661" fill="var(--skin)" opacity=".8"/>
+      <polygon points="295,650 307,648 309,630 303,625 296,627 292,641" fill="var(--cloth)"/>
+      <polygon points="303,625 309,630 307,648 302,649 304,633" fill="var(--cloth)" opacity=".72"/>
+      <polygon points="294,632 298,633 296,648 292,647" fill="var(--skin)" opacity=".85"/>
+      <polygon points="297,622 302,620 306,623 308,628 306,633 302,635 297,634 294,629" fill="var(--skin)"/>
+      <polygon points="302,620 306,623 308,628 306,633 302,635 301,635" fill="var(--skin)" opacity=".72"/>
+      <polygon points="294,628 296,622 301,619 307,622 309,627 305,625 300,624 296,626" fill="var(--wood-dark)"/>
+    </g>
+
+    <!-- asleep under the lean-to, head to the covered end -->
+    <g class="pose p-bed" transform="translate(-34,32)">
+      <polygon points="272,662 274,652 292,648 314,647 320,652 320,662" fill="var(--cloth)"/>
+      <polygon points="274,652 292,648 314,647 316,653 292,654 276,657" fill="var(--cloth)" opacity=".68"/>
+      <polygon points="314,646 319,644 323,647 324,652 321,656 316,656 313,652" fill="var(--skin)"/>
+      <polygon points="319,644 323,647 324,652 321,656 318,656" fill="var(--skin)" opacity=".72"/>
+      <polygon points="312,650 314,644 319,642 324,645 325,650 321,648 316,648 313,650" fill="var(--wood-dark)"/>
+      <polygon points="268,660 274,656 276,662 268,664" fill="var(--wood-lit)" opacity=".7"/>
+    </g>
+  </g>
+
+  <!-- ================= WATER COLLECTION SPOT ================= -->
+  <!-- water collection — left of the fire, lower on the sand -->
+  <g id="watercatch" transform="translate(-28,36)">
+    <ellipse cx="96" cy="742" rx="34" ry="8" fill="#2C2A2E" opacity="var(--shadow-op)" filter="url(#blur6)"/>
+    <!-- three flat stones holding the container clear of the sand -->
+    <g fill="var(--rock-dark)">
+      <polygon points="70,740 78,733 90,735 88,744 74,745"/>
+      <polygon points="100,742 110,734 122,737 120,746 104,747"/>
+      <polygon points="84,748 96,744 108,748 98,753 86,752"/>
+    </g>
+    <g fill="var(--rock-lit)" opacity=".5">
+      <polygon points="70,740 78,733 90,735 76,738"/>
+      <polygon points="100,742 110,734 122,737 106,740"/>
+    </g>
+    <!-- coconut cup, cut half, water rising inside -->
+    <path d="M79 716A17 17 0 0 0 113 716Z" fill="var(--cocoD, #5A432D)"/>
+    <path d="M79 716A17 17 0 0 0 113 716Z" fill="var(--trunk-dark)"/>
+    <clipPath id="cupclip"><path d="M79 716A17 17 0 0 0 113 716Z"/></clipPath>
+    <g clip-path="url(#cupclip)">
+      <rect id="cupfill" x="78" y="724" width="36" height="16" fill="var(--sea-shal)"/>
+      <rect id="cupfilltop" x="78" y="723" width="36" height="2" fill="var(--foam)" opacity=".8"/>
+    </g>
+    <ellipse cx="96" cy="716" rx="17" ry="5" fill="var(--trunk-lit)" opacity=".9"/>
+    <ellipse cx="96" cy="716.5" rx="13" ry="3.6" fill="var(--sea-shal)"/>
+    <ellipse cx="96" cy="717.4" rx="13" ry="3.6" fill="var(--sea-far)" opacity=".5"/>
+    <path d="M84 719A13 3.6 0 0 0 98 720Z" fill="var(--foam)" opacity=".35"/>
+    <!-- rain landing in it -->
+    <g class="catchdrip" opacity="0">
+      <line x1="90" y1="694" x2="89" y2="704" stroke="#DCE6EA" stroke-width="1.2" stroke-linecap="round">
+        <animate attributeName="y1" values="686;704" dur=".7s" repeatCount="indefinite"/>
+        <animate attributeName="y2" values="696;714" dur=".7s" repeatCount="indefinite"/></line>
+      <line x1="102" y1="690" x2="101" y2="700" stroke="#DCE6EA" stroke-width="1.2" stroke-linecap="round">
+        <animate attributeName="y1" values="682;704" dur=".55s" begin=".2s" repeatCount="indefinite"/>
+        <animate attributeName="y2" values="692;714" dur=".55s" begin=".2s" repeatCount="indefinite"/></line>
+    </g>
+  </g>
+
+  <!-- ================= FIRE ================= -->
+  <g class="firepit">
+  <ellipse class="firelight" cx="134" cy="704" rx="130" ry="64" fill="url(#g-fire)" opacity="var(--glow-op)"/>
+  <g>
+    <ellipse cx="134" cy="722" rx="30" ry="8" fill="var(--rock-dark)" opacity=".65"/>
+    <g fill="var(--rock-lit)">
+      <polygon points="110,720 118,714 126,720 118,726"/><polygon points="142,718 152,713 160,720 150,726"/>
+      <polygon points="126,728 136,724 146,730 134,734"/>
+    </g>
+    <g fill="var(--wood-dark)">
+      <polygon points="118,716 148,706 151,710 121,720"/>
+      <polygon points="120,708 150,720 148,724 118,712"/>
+    </g>
+    <g class="fire-live">
+    <path class="flame" d="M134 706c-9-6-11-16-5-25 1 6 4 10 8 12 3-9 2-17-4-24 13 6 21 17 21 28 0 8-6 13-14 15z"
+          fill="#E4763F" opacity="var(--fire-op)"/>
+    <path class="flame-in" d="M136 704c-5-4-6-11-3-16 1 4 3 7 6 8 1-5 0-10-2-14 8 5 12 11 12 18 0 5-4 8-9 9z"
+          fill="#FFC578" opacity="var(--fire-op)"/>
+    <g fill="#FFB25C" opacity="var(--fire-op)">
+      <circle cx="140" cy="686" r="1.3"><animate attributeName="cy" values="692;648" dur="4s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0" dur="4s" repeatCount="indefinite"/></circle>
+      <circle cx="128" cy="682" r="1.1"><animate attributeName="cy" values="694;640" dur="6s" begin="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" values=".9;0" dur="6s" begin="1.5s" repeatCount="indefinite"/></circle>
+    </g>
+    <g opacity=".15" fill="#CFC6BA" filter="url(#blur6)">
+      <ellipse cx="134" cy="690" rx="8" ry="14">
+        <animate attributeName="cy" values="696;600" dur="10s" repeatCount="indefinite"/>
+        <animate attributeName="rx" values="5;24" dur="10s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values=".35;0" dur="10s" repeatCount="indefinite"/></ellipse>
+    </g>
+    </g>
+  </g>
+
+  </g>
+
+  <!-- ================= PALMS ================= -->
+  <!-- palm D, far left back -->
+  <g class="palmD">
+    <path d="M11.5 640L13.9 568L16.25 496L18.6 424L21 352L27 352L25.4 424L23.75 496L22.1 568L20.5 640Z" fill="var(--trunk-dark)"/>
+    <path d="M16 640L18 568L20 496L22 424L24 352L27 352L25.4 424L23.75 496L22.1 568L20.5 640Z" fill="var(--trunk-lit)" opacity=".7"/>
+    <g fill="none" stroke="var(--trunk-dark)" stroke-width="1.6" opacity=".45">
+      <path d="M13.9 568Q18 572 22.1 568"/><path d="M16.25 496Q20 500 23.75 496"/><path d="M18.6 424Q22 428 25.4 424"/>
+    </g>
+    <g class="crown">
+      <use href="#frond-b" transform="translate(24,352) rotate(-118) scale(.5)"/>
+      <use href="#frond-b" transform="translate(24,352) rotate(-88) scale(.5)"/>
+      <use href="#frond-b" transform="translate(24,352) rotate(-58) scale(.5)"/>
+      <use href="#frond-b" transform="translate(24,352) rotate(-160) scale(.52)"/>
+      <use href="#frond-b" transform="translate(24,352) rotate(-16) scale(.52)"/>
+      <use href="#frond-b" transform="translate(24,352) rotate(150) scale(.48)"/>
+      <use href="#frond-b" transform="translate(24,352) rotate(28) scale(.48)"/>
+    </g>
+  </g>
+
+  <!-- palm B -->
+  <g class="palmB">
+    <g class="trunk">
+      <path fill="var(--trunk-dark)" d="M103.5 664L104.6 618L106.2 572L108.4 526L111.2 480L114.5 434L118.4 388L122.9 342L127.9 296L136.1 296L131.7 342L127.8 388L124.5 434L121.8 480L119.6 526L118 572L117 618L116.5 664Z"/>
+      <path fill="var(--trunk-lit)" opacity=".8" d="M110 664L110.8 618L112.1 572L114 526L116.5 480L119.5 434L123.1 388L127.3 342L132 296L136.1 296L131.7 342L127.8 388L124.5 434L121.8 480L119.6 526L118 572L117 618L116.5 664Z"/>
+      <g fill="none" stroke="var(--trunk-dark)" stroke-width="1.8" opacity=".45">
+        <path d="M104.6 618Q110.8 623 117 618"/><path d="M106.2 572Q112.1 577 118 572"/>
+        <path d="M108.4 526Q114 531 119.6 526"/><path d="M111.2 480Q116.5 485 121.8 480"/>
+        <path d="M114.5 434Q119.5 439 124.5 434"/><path d="M118.4 388Q123.1 392 127.8 388"/>
+        <path d="M122.9 342Q127.3 346 131.7 342"/>
+      </g>
+    </g>
+    <g class="crown">
+      <use href="#frond-b" transform="translate(132,296) rotate(-118) scale(.78)"/>
+      <use href="#frond-b" transform="translate(132,296) rotate(-88) scale(.8)"/>
+      <use href="#frond-b" transform="translate(132,296) rotate(-58) scale(.78)"/>
+      <use href="#frond" transform="translate(132,296) rotate(-152) scale(.82)"/>
+      <use href="#frond" transform="translate(132,296) rotate(-24) scale(.84)"/>
+      <use href="#frond" transform="translate(132,296) rotate(166) scale(.8)"/>
+      <use href="#frond" transform="translate(132,296) rotate(10) scale(.82)"/>
+      <use href="#frond" transform="translate(132,296) rotate(134) scale(.72)"/>
+      <use href="#frond" transform="translate(132,296) rotate(44) scale(.74)"/>
+      <g fill="var(--veg-dark)">
+        <circle cx="126" cy="305" r="5"/><circle cx="139" cy="308" r="4.5"/><circle cx="132" cy="314" r="4"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- palm A, biggest, front left -->
+  <g class="palmA">
+    <g class="trunk">
+      <path fill="var(--trunk-dark)" d="M37.5 706L38.9 657L40.7 608L42.9 560L45.5 512L48.5 464L51.9 417L55.7 370L59.9 324L64.5 278L69.5 232L78.5 232L74.3 278L70.5 324L67.1 370L64.1 417L61.5 464L59.3 512L57.5 560L56.1 608L55.1 657L54.5 706Z"/>
+      <path fill="var(--trunk-lit)" opacity=".85" d="M46 706L47 657L48.4 608L50.2 560L52.4 512L55 464L58 417L61.4 370L65.2 324L69.4 278L74 232L78.5 232L74.3 278L70.5 324L67.1 370L64.1 417L61.5 464L59.3 512L57.5 560L56.1 608L55.1 657L54.5 706Z"/>
+      <g fill="none" stroke="var(--trunk-dark)" stroke-width="2.2" opacity=".45">
+        <path d="M38.9 657Q47 663 55.1 657"/><path d="M40.7 608Q48.4 614 56.1 608"/>
+        <path d="M42.9 560Q50.2 566 57.5 560"/><path d="M45.5 512Q52.4 518 59.3 512"/>
+        <path d="M48.5 464Q55 470 61.5 464"/><path d="M51.9 417Q58 422 64.1 417"/>
+        <path d="M55.7 370Q61.4 375 67.1 370"/><path d="M59.9 324Q65.2 329 70.5 324"/>
+        <path d="M64.5 278Q69.4 283 74.3 278"/>
+      </g>
+    </g>
+    <g class="crown">
+      <use href="#frond-b" transform="translate(74,232) rotate(-120) scale(.98)"/>
+      <use href="#frond-b" transform="translate(74,232) rotate(-90) scale(1)"/>
+      <use href="#frond-b" transform="translate(74,232) rotate(-60) scale(.98)"/>
+      <use href="#frond" transform="translate(74,232) rotate(-150) scale(1.02)"/>
+      <use href="#frond" transform="translate(74,232) rotate(-26) scale(1.04)"/>
+      <use href="#frond" transform="translate(74,232) rotate(168) scale(1)"/>
+      <use href="#frond" transform="translate(74,232) rotate(8) scale(1.02)"/>
+      <use href="#frond" transform="translate(74,232) rotate(136) scale(.9)"/>
+      <use href="#frond" transform="translate(74,232) rotate(46) scale(.92)"/>
+      <g fill="var(--veg-dark)">
+        <circle cx="67" cy="243" r="7"/><circle cx="83" cy="247" r="6"/><circle cx="74" cy="255" r="5.5"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- palm C, right mid-ground -->
+  <g class="palmC">
+    <path fill="var(--trunk-dark)" d="M340.5 592L342.5 550L344.5 508L346.5 466L348.5 424L355.5 424L354.5 466L353.5 508L352.5 550L351.5 592Z"/>
+    <path fill="var(--trunk-lit)" opacity=".8" d="M346 592L347.5 550L349 508L350.5 466L352 424L355.5 424L354.5 466L353.5 508L352.5 550L351.5 592Z"/>
+    <g fill="none" stroke="var(--trunk-dark)" stroke-width="1.6" opacity=".45">
+      <path d="M342.5 550Q347.5 554 352.5 550"/><path d="M344.5 508Q349 512 353.5 508"/>
+      <path d="M346.5 466Q350.5 470 354.5 466"/>
+    </g>
+    <g class="crown">
+      <use href="#frond-b" transform="translate(352,424) rotate(-118) scale(.56)"/>
+      <use href="#frond-b" transform="translate(352,424) rotate(-88) scale(.58)"/>
+      <use href="#frond-b" transform="translate(352,424) rotate(-58) scale(.56)"/>
+      <use href="#frond" transform="translate(352,424) rotate(-150) scale(.6)"/>
+      <use href="#frond" transform="translate(352,424) rotate(-24) scale(.6)"/>
+      <use href="#frond" transform="translate(352,424) rotate(160) scale(.56)"/>
+      <use href="#frond" transform="translate(352,424) rotate(16) scale(.58)"/>
+      <use href="#frond" transform="translate(352,424) rotate(48) scale(.5)"/>
+      <g fill="var(--veg-dark)"><circle cx="347" cy="432" r="3.6"/><circle cx="357" cy="434" r="3.2"/></g>
+    </g>
+  </g>
+
+  <!-- ================= FOREGROUND FRAME ================= -->
+  <g filter="url(#blur6)" opacity=".9">
+    <polygon points="-10,808 90,790 210,812 330,796 400,810 400,860 -10,860" fill="var(--sand-shad)"/>
+  </g>
+
+  <!-- ================= WEATHER ================= -->
+  <g class="heat" stroke="#FFF6E2" fill="none" stroke-linecap="round" opacity=".5">
+    <path d="M40 498q18 -4 36 0t36 0" stroke-width="1.6" opacity=".5" style="animation-delay:-.4s"/>
+    <path d="M150 486q20 -4 40 0t40 0" stroke-width="1.4" opacity=".45" style="animation-delay:-1.7s"/>
+    <path d="M250 502q18 -4 36 0t36 0" stroke-width="1.5" opacity=".4" style="animation-delay:-2.9s"/>
+    <path d="M70 596q22 -5 44 0t44 0" stroke-width="1.8" opacity=".38" style="animation-delay:-1.1s"/>
+    <path d="M210 612q22 -5 44 0t44 0" stroke-width="1.8" opacity=".34" style="animation-delay:-3.4s"/>
+    <path d="M120 672q26 -5 52 0t52 0" stroke-width="2" opacity=".3" style="animation-delay:-2.2s"/>
+    <path d="M180 306q24 -4 48 0t48 0" stroke-width="1.2" opacity=".45" style="animation-delay:-.8s"/>
+  </g>
+
+  <g class="rain" id="rain"><line x1="42.77" y1="159.79" x2="37.77" y2="172.30" style="animation-delay:-0.657s;opacity:0.467"/><line x1="139.72" y1="118.49" x2="134.72" y2="145.46" style="animation-delay:-0.088s;opacity:0.335"/><line x1="296.88" y1="421.07" x2="291.88" y2="439.18" style="animation-delay:-0.459s;opacity:0.306"/><line x1="193.13" y1="442.85" x2="188.13" y2="469.57" style="animation-delay:-0.389s;opacity:0.268"/><line x1="405.11" y1="143.21" x2="400.11" y2="170.28" style="animation-delay:-0.077s;opacity:0.402"/><line x1="266.89" y1="333.18" x2="261.89" y2="355.55" style="animation-delay:-0.993s;opacity:0.446"/><line x1="98.38" y1="348.93" x2="93.38" y2="365.93" style="animation-delay:-0.859s;opacity:0.328"/><line x1="211.16" y1="113.15" x2="206.16" y2="140.98" style="animation-delay:-0.617s;opacity:0.425"/><line x1="171.13" y1="244.26" x2="166.13" y2="257.20" style="animation-delay:-0.077s;opacity:0.269"/><line x1="251.96" y1="420.33" x2="246.96" y2="443.81" style="animation-delay:-0.562s;opacity:0.234"/><line x1="139.00" y1="181.75" x2="134.00" y2="208.25" style="animation-delay:-0.572s;opacity:0.313"/><line x1="242.54" y1="205.60" x2="237.54" y2="227.69" style="animation-delay:-0.279s;opacity:0.492"/><line x1="332.91" y1="349.22" x2="327.91" y2="361.90" style="animation-delay:-0.856s;opacity:0.444"/><line x1="-16.20" y1="377.19" x2="-21.20" y2="390.29" style="animation-delay:-1.077s;opacity:0.454"/><line x1="360.89" y1="426.44" x2="355.89" y2="453.78" style="animation-delay:-0.754s;opacity:0.221"/><line x1="268.35" y1="316.28" x2="263.35" y2="337.21" style="animation-delay:-1.090s;opacity:0.262"/><line x1="302.44" y1="242.25" x2="297.44" y2="268.84" style="animation-delay:-0.517s;opacity:0.304"/><line x1="-36.73" y1="327.38" x2="-41.73" y2="349.82" style="animation-delay:-1.070s;opacity:0.311"/><line x1="25.15" y1="289.64" x2="20.15" y2="308.48" style="animation-delay:-0.138s;opacity:0.358"/><line x1="-8.24" y1="116.37" x2="-13.24" y2="130.39" style="animation-delay:-0.445s;opacity:0.278"/><line x1="103.64" y1="156.24" x2="98.64" y2="182.38" style="animation-delay:-0.135s;opacity:0.266"/><line x1="415.97" y1="339.68" x2="410.97" y2="352.67" style="animation-delay:-0.357s;opacity:0.427"/><line x1="399.88" y1="421.41" x2="394.88" y2="447.83" style="animation-delay:-0.188s;opacity:0.296"/><line x1="161.54" y1="447.90" x2="156.54" y2="465.50" style="animation-delay:-0.856s;opacity:0.388"/><line x1="25.86" y1="252.41" x2="20.86" y2="268.93" style="animation-delay:-0.870s;opacity:0.256"/><line x1="215.43" y1="405.27" x2="210.43" y2="430.44" style="animation-delay:-0.333s;opacity:0.363"/><line x1="408.36" y1="118.47" x2="403.36" y2="136.53" style="animation-delay:-0.821s;opacity:0.271"/><line x1="61.17" y1="390.98" x2="56.17" y2="406.30" style="animation-delay:-0.054s;opacity:0.509"/><line x1="46.39" y1="282.27" x2="41.39" y2="300.22" style="animation-delay:-1.142s;opacity:0.519"/><line x1="312.98" y1="296.39" x2="307.98" y2="319.63" style="animation-delay:-0.677s;opacity:0.310"/><line x1="344.55" y1="490.91" x2="339.55" y2="515.88" style="animation-delay:-0.538s;opacity:0.513"/><line x1="-18.86" y1="401.02" x2="-23.86" y2="416.63" style="animation-delay:-0.301s;opacity:0.491"/><line x1="350.54" y1="256.09" x2="345.54" y2="268.75" style="animation-delay:-0.073s;opacity:0.456"/><line x1="96.25" y1="453.19" x2="91.25" y2="481.07" style="animation-delay:-0.686s;opacity:0.402"/><line x1="9.67" y1="104.57" x2="4.67" y2="130.55" style="animation-delay:-0.151s;opacity:0.449"/><line x1="157.72" y1="352.93" x2="152.72" y2="367.92" style="animation-delay:-1.194s;opacity:0.448"/><line x1="119.13" y1="141.11" x2="114.13" y2="158.10" style="animation-delay:-0.396s;opacity:0.276"/><line x1="218.90" y1="420.91" x2="213.90" y2="444.74" style="animation-delay:-0.401s;opacity:0.387"/><line x1="271.11" y1="320.82" x2="266.11" y2="336.25" style="animation-delay:-0.376s;opacity:0.429"/><line x1="-25.97" y1="457.07" x2="-30.97" y2="481.28" style="animation-delay:-1.046s;opacity:0.444"/><line x1="133.95" y1="289.79" x2="128.95" y2="304.51" style="animation-delay:-0.231s;opacity:0.250"/><line x1="317.71" y1="472.53" x2="312.71" y2="490.98" style="animation-delay:-0.449s;opacity:0.298"/><line x1="-5.89" y1="494.32" x2="-10.89" y2="514.23" style="animation-delay:-0.961s;opacity:0.512"/><line x1="218.23" y1="244.04" x2="213.23" y2="271.60" style="animation-delay:-0.939s;opacity:0.472"/><line x1="22.30" y1="401.55" x2="17.30" y2="423.38" style="animation-delay:-0.725s;opacity:0.397"/><line x1="-28.30" y1="408.20" x2="-33.30" y2="426.36" style="animation-delay:-0.183s;opacity:0.351"/><line x1="276.00" y1="389.12" x2="271.00" y2="412.85" style="animation-delay:-0.925s;opacity:0.289"/><line x1="385.51" y1="279.13" x2="380.51" y2="297.57" style="animation-delay:-0.293s;opacity:0.230"/><line x1="146.40" y1="388.42" x2="141.40" y2="407.92" style="animation-delay:-0.274s;opacity:0.380"/><line x1="150.62" y1="347.83" x2="145.62" y2="360.39" style="animation-delay:-0.114s;opacity:0.511"/><line x1="-14.43" y1="343.72" x2="-19.43" y2="371.72" style="animation-delay:-1.007s;opacity:0.401"/><line x1="99.07" y1="356.43" x2="94.07" y2="369.05" style="animation-delay:-0.078s;opacity:0.472"/><line x1="418.87" y1="476.87" x2="413.87" y2="495.71" style="animation-delay:-0.820s;opacity:0.334"/><line x1="165.71" y1="265.26" x2="160.71" y2="279.78" style="animation-delay:-0.855s;opacity:0.467"/><line x1="26.18" y1="453.72" x2="21.18" y2="473.60" style="animation-delay:-0.592s;opacity:0.331"/><line x1="-11.19" y1="355.31" x2="-16.19" y2="370.04" style="animation-delay:-0.212s;opacity:0.490"/><line x1="280.63" y1="200.86" x2="275.63" y2="225.12" style="animation-delay:-0.387s;opacity:0.456"/><line x1="260.81" y1="337.97" x2="255.81" y2="359.49" style="animation-delay:-0.075s;opacity:0.514"/><line x1="159.49" y1="399.60" x2="154.49" y2="421.57" style="animation-delay:-0.584s;opacity:0.310"/><line x1="347.43" y1="198.22" x2="342.43" y2="217.85" style="animation-delay:-0.743s;opacity:0.268"/><line x1="17.58" y1="136.52" x2="12.58" y2="149.20" style="animation-delay:-0.052s;opacity:0.293"/><line x1="181.74" y1="182.68" x2="176.74" y2="208.05" style="animation-delay:-0.555s;opacity:0.439"/><line x1="404.49" y1="134.96" x2="399.49" y2="149.62" style="animation-delay:-0.667s;opacity:0.501"/><line x1="171.24" y1="452.16" x2="166.24" y2="479.25" style="animation-delay:-0.521s;opacity:0.306"/><line x1="300.13" y1="310.03" x2="295.13" y2="333.84" style="animation-delay:-1.185s;opacity:0.279"/><line x1="319.40" y1="202.66" x2="314.40" y2="221.64" style="animation-delay:-1.041s;opacity:0.479"/><line x1="161.22" y1="372.97" x2="156.22" y2="392.21" style="animation-delay:-1.075s;opacity:0.365"/><line x1="381.43" y1="362.55" x2="376.43" y2="386.44" style="animation-delay:-0.844s;opacity:0.290"/><line x1="173.26" y1="216.28" x2="168.26" y2="236.80" style="animation-delay:-1.087s;opacity:0.325"/><line x1="144.13" y1="246.18" x2="139.13" y2="260.76" style="animation-delay:-0.613s;opacity:0.250"/><line x1="308.22" y1="215.06" x2="303.22" y2="239.34" style="animation-delay:-0.733s;opacity:0.286"/><line x1="396.83" y1="226.17" x2="391.83" y2="249.53" style="animation-delay:-1.005s;opacity:0.398"/><line x1="53.77" y1="326.17" x2="48.77" y2="351.18" style="animation-delay:-0.792s;opacity:0.309"/><line x1="11.47" y1="391.76" x2="6.47" y2="416.67" style="animation-delay:-1.071s;opacity:0.354"/><line x1="22.68" y1="153.29" x2="17.68" y2="176.99" style="animation-delay:-0.036s;opacity:0.290"/><line x1="35.35" y1="168.83" x2="30.35" y2="185.47" style="animation-delay:-0.541s;opacity:0.287"/><line x1="109.45" y1="326.00" x2="104.45" y2="348.14" style="animation-delay:-0.849s;opacity:0.360"/><line x1="262.53" y1="416.57" x2="257.53" y2="438.67" style="animation-delay:-0.338s;opacity:0.395"/><line x1="180.56" y1="273.05" x2="175.56" y2="287.99" style="animation-delay:-0.746s;opacity:0.473"/><line x1="-14.51" y1="186.71" x2="-19.51" y2="200.64" style="animation-delay:-0.056s;opacity:0.340"/><line x1="71.15" y1="435.32" x2="66.15" y2="451.57" style="animation-delay:-0.655s;opacity:0.442"/><line x1="88.23" y1="289.59" x2="83.23" y2="314.84" style="animation-delay:-0.751s;opacity:0.251"/><line x1="39.94" y1="318.79" x2="34.94" y2="331.70" style="animation-delay:-0.191s;opacity:0.368"/><line x1="347.12" y1="437.28" x2="342.12" y2="451.51" style="animation-delay:-0.387s;opacity:0.407"/><line x1="239.16" y1="282.02" x2="234.16" y2="308.68" style="animation-delay:-0.000s;opacity:0.463"/><line x1="40.51" y1="473.19" x2="35.51" y2="487.43" style="animation-delay:-0.945s;opacity:0.373"/><line x1="412.21" y1="186.77" x2="407.21" y2="201.62" style="animation-delay:-1.156s;opacity:0.377"/><line x1="397.76" y1="186.91" x2="392.76" y2="208.17" style="animation-delay:-1.080s;opacity:0.239"/><line x1="266.39" y1="490.59" x2="261.39" y2="514.77" style="animation-delay:-0.552s;opacity:0.324"/><line x1="398.94" y1="105.23" x2="393.94" y2="132.83" style="animation-delay:-0.255s;opacity:0.453"/></g>
+  <rect class="bolt" width="390" height="844" fill="#DCE8F2"/>
+
+  <!-- global light tint -->
+  <rect width="390" height="844" fill="var(--tint)" opacity="var(--tint-op)" pointer-events="none"/>
+</svg>

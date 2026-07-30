@@ -1,0 +1,22 @@
+{
+  "name": "Last Shore",
+  "short_name": "Last Shore",
+  "description": "Balance test for Last Shore — mobile survival on a lonely shore.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B0D11",
+  "theme_color": "#0E1218",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

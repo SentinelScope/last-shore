@@ -96,14 +96,31 @@ function writeMuted(value: boolean): void {
   }
 }
 
+function unbindGestureUnlock(unlock: () => void): void {
+  if (typeof window === "undefined") return;
+  window.removeEventListener("pointerdown", unlock, true);
+  window.removeEventListener("touchstart", unlock, true);
+  window.removeEventListener("keydown", unlock, true);
+}
+
 function bindGestureUnlock(): void {
   if (typeof window === "undefined" || gestureBound) return;
+  if (ctx?.state === "running") return;
   gestureBound = true;
   const unlock = () => {
-    window.removeEventListener("pointerdown", unlock, true);
-    void resumeAndApply();
+    void (async () => {
+      await resumeAndApply();
+      // Drop the listener only once audio is actually running. If resume is
+      // still blocked, keep listening for the next gesture.
+      if (ctx?.state === "running") {
+        unbindGestureUnlock(unlock);
+        gestureBound = false;
+      }
+    })();
   };
   window.addEventListener("pointerdown", unlock, true);
+  window.addEventListener("touchstart", unlock, true);
+  window.addEventListener("keydown", unlock, true);
 }
 
 function bindVisibility(): void {
@@ -114,7 +131,10 @@ function bindVisibility(): void {
     if (document.hidden) {
       void ctx.suspend();
     } else if (!muted) {
-      void resumeAndApply();
+      void (async () => {
+        await resumeAndApply();
+        if (ctx?.state !== "running") bindGestureUnlock();
+      })();
     }
   });
 }
@@ -194,7 +214,8 @@ async function fetchBuffer(url: string): Promise<AudioBuffer | null> {
 async function loadWeather(id: WeatherId): Promise<void> {
   const track = weatherTracks.get(id);
   if (!track || !ctx) return;
-  if (track.buffer || track.loading) {
+  if (track.buffer) return;
+  if (track.loading) {
     await track.loading;
     return;
   }
@@ -310,11 +331,11 @@ function applyFireFade(fadeSec?: number): void {
 async function resumeAndApply(): Promise<void> {
   const audio = await ensureContext();
   if (!audio) return;
-  if (audio.state === "suspended") {
+  if (audio.state === "suspended" || audio.state === "interrupted") {
     try {
       await audio.resume();
     } catch {
-      return;
+      /* still locked — gesture listener will retry */
     }
   }
   if (master) {
@@ -326,11 +347,20 @@ async function resumeAndApply(): Promise<void> {
   }
   if (wantedWeather) {
     await loadWeather(wantedWeather);
+    const track = weatherTracks.get(wantedWeather);
     if (
       wantedWeather !== currentWeather ||
-      !weatherTracks.get(wantedWeather)?.source
+      !track?.source ||
+      !track.buffer
     ) {
       crossfadeWeather(wantedWeather);
+    } else {
+      // Re-assert the active bed gain after unlock / unmute.
+      const now = audio.currentTime;
+      const target = muted || document.hidden ? 0 : WEATHER_GAIN[wantedWeather];
+      track.gain.gain.cancelScheduledValues(now);
+      track.gain.gain.setValueAtTime(track.gain.gain.value, now);
+      track.gain.gain.linearRampToValueAtTime(target, now + 0.15);
     }
   }
   if (nightWanted) {
@@ -353,17 +383,7 @@ export function setWeatherTrack(weather: WeatherId): void {
   wantedWeather = weather;
   bindGestureUnlock();
   bindVisibility();
-  void (async () => {
-    await ensureContext();
-    await loadWeather(weather);
-    const audio = ctx;
-    if (!audio) return;
-    if (audio.state === "suspended") return;
-    crossfadeWeather(weather);
-    if (master) {
-      master.gain.value = document.hidden || muted ? 0 : 1;
-    }
-  })();
+  void resumeAndApply();
 }
 
 /** Layer / remove the night bed over the current weather track. */
@@ -372,17 +392,7 @@ export function setNightAmbience(on: boolean): void {
   nightWanted = on;
   bindGestureUnlock();
   bindVisibility();
-  void (async () => {
-    await ensureContext();
-    if (on) await loadNight();
-    const audio = ctx;
-    if (!audio) return;
-    if (audio.state === "suspended") return;
-    applyNightFade();
-    if (master) {
-      master.gain.value = document.hidden || muted ? 0 : 1;
-    }
-  })();
+  void resumeAndApply();
 }
 
 /**
@@ -395,17 +405,7 @@ export function setFireplaceBurning(on: boolean): void {
   fireBurning = on;
   bindGestureUnlock();
   bindVisibility();
-  void (async () => {
-    await ensureContext();
-    if (on) await loadFireplace();
-    const audio = ctx;
-    if (!audio) return;
-    if (audio.state === "suspended") return;
-    applyFireFade(on ? FIRE_FADE_IN_SEC : FIRE_FADE_OUT_SEC);
-    if (master) {
-      master.gain.value = document.hidden || muted ? 0 : 1;
-    }
-  })();
+  void resumeAndApply();
 }
 
 /** Louder at the fireplace page (0.85) than on the beach (0.5). ~400ms. */
@@ -413,14 +413,20 @@ export function setFireplaceProximity(where: FireplaceProximity): void {
   muted = readMuted();
   if (where === fireProximity) return;
   fireProximity = where;
+  if (!fireBurning) return;
   bindGestureUnlock();
   bindVisibility();
   void (async () => {
     await ensureContext();
     const audio = ctx;
     if (!audio) return;
-    if (audio.state === "suspended") return;
-    if (!fireBurning) return;
+    if (audio.state === "suspended" || audio.state === "interrupted") {
+      try {
+        await audio.resume();
+      } catch {
+        /* gesture retry */
+      }
+    }
     applyFireFade(FIRE_PROXIMITY_SEC);
   })();
 }
@@ -478,11 +484,11 @@ export function setMuted(value: boolean): void {
   void (async () => {
     const audio = await ensureContext();
     if (!audio || !master) return;
-    if (audio.state === "suspended" && !value) {
+    if (!value && (audio.state === "suspended" || audio.state === "interrupted")) {
       try {
         await audio.resume();
       } catch {
-        return;
+        /* still locked — unlock listener will retry */
       }
     }
     const now = audio.currentTime;
@@ -492,19 +498,8 @@ export function setMuted(value: boolean): void {
       value || document.hidden ? 0 : 1,
       now + 0.2,
     );
-    if (!value && wantedWeather) {
-      await loadWeather(wantedWeather);
-      if (!weatherTracks.get(wantedWeather)?.source) {
-        crossfadeWeather(wantedWeather);
-      }
-    }
-    if (!value && nightWanted) {
-      await loadNight();
-      applyNightFade();
-    }
-    if (!value && fireBurning) {
-      await loadFireplace();
-      applyFireFade();
+    if (!value) {
+      await resumeAndApply();
     }
   })();
 }

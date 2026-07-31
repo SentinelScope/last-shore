@@ -8,11 +8,11 @@ import { rngFor, weightedPick } from "./rng";
 import { latestWeatherRollAt, tickIndexAt } from "./time";
 
 function weatherWeights(prev: WeatherId | null): Record<WeatherId, number> {
-  const base = { ...WEATHER_BASE_WEIGHTS };
-  if (!prev) return base;
-  const override = WEATHER_CONDITIONAL[prev];
-  if (!override) return base;
-  return { ...base, ...override };
+  if (prev) {
+    const row = WEATHER_CONDITIONAL[prev];
+    if (row) return { ...row };
+  }
+  return { ...WEATHER_BASE_WEIGHTS };
 }
 
 /** All weather-roll epoch ms from `fromRollMs` through `toRollMs` inclusive. */

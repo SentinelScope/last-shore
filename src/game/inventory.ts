@@ -1,6 +1,10 @@
 import { ITEMS } from "./items";
 import type { InventorySlot } from "./persist";
-import { STORAGE_TIERS, WATER_CAPACITY, type StorageTierId } from "./balance";
+import {
+  storageSlotCount,
+  WATER_CAPACITY,
+  type StorageTierId,
+} from "./balance";
 
 export type LootPile = { itemId: string; qty: number }[];
 
@@ -32,7 +36,7 @@ export function placeLoot(
   storageTier: StorageTierId,
   loot: LootPile,
 ): { inventory: InventorySlot[]; kept: LootPile; lost: LootPile } {
-  const maxSlots = STORAGE_TIERS[storageTier].slots;
+  const maxSlots = storageSlotCount(storageTier);
   const next = inventory.map((s) => ({ ...s }));
   const kept: LootPile = [];
   const lost: LootPile = [];

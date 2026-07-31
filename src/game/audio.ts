@@ -1,6 +1,6 @@
 /**
  * Game audio — Web Audio only.
- * Weather beds, night overlay, one-shot SFX.
+ * Weather beds, night overlay, fireplace loop, one-shot SFX.
  * Missing files fail silently. Unlocks on first pointerdown.
  */
 
@@ -9,8 +9,14 @@ import type { WeatherId } from "./balance";
 const MUTE_KEY = "last-shore-audio-muted";
 const CROSSFADE_SEC = 2.5;
 const NIGHT_CROSSFADE_SEC = 2.0;
+const FIRE_FADE_IN_SEC = 1.5;
+const FIRE_FADE_OUT_SEC = 2.0;
+const FIRE_PROXIMITY_SEC = 0.4;
+const FIRE_GAIN_BEACH = 0.5;
+const FIRE_GAIN_FIREPLACE = 0.85;
 const SFX_VOLUME = 0.85;
 const NIGHT_VOLUME = 0.7;
+const FIREPLACE_SRC = "/audio/sfx/fireplace.mp3";
 
 const WEATHER_IDS: WeatherId[] = [
   "clear",
@@ -18,7 +24,18 @@ const WEATHER_IDS: WeatherId[] = [
   "overcast",
   "rain",
   "storm",
+  "omen",
 ];
+
+/** Per-weather bed gain when that track is active (others fade to 0). */
+const WEATHER_GAIN: Record<WeatherId, number> = {
+  clear: 0.7,
+  hot: 0.7,
+  overcast: 0.7,
+  rain: 0.7,
+  storm: 0.7,
+  omen: 1.0,
+};
 
 export type SfxId =
   | "activity_complete"
@@ -26,11 +43,13 @@ export type SfxId =
   | "diary"
   | "items";
 
+export type FireplaceProximity = "beach" | "fireplace";
+
 const SFX_SRC: Record<SfxId, string> = {
-  activity_complete: "/audio/sound%20effects/activity_complete.mp3",
-  build: "/audio/sound%20effects/build.mp3",
-  diary: "/audio/sound%20effects/diary.mp3",
-  items: "/audio/sound%20effects/items.mp3",
+  activity_complete: "/audio/sfx/activity_complete.mp3",
+  build: "/audio/sfx/build.mp3",
+  diary: "/audio/sfx/diary.mp3",
+  items: "/audio/sfx/items.mp3",
 };
 
 const NIGHT_SRC = "/audio/daytime/night.mp3";
@@ -47,8 +66,11 @@ let master: GainNode | null = null;
 let sfxBus: GainNode | null = null;
 const weatherTracks = new Map<WeatherId, LoopTrack>();
 let nightTrack: LoopTrack | null = null;
+let fireTrack: LoopTrack | null = null;
 let currentWeather: WeatherId | null = null;
 let nightWanted = false;
+let fireBurning = false;
+let fireProximity: FireplaceProximity = "beach";
 let muted = false;
 let gestureBound = false;
 let visibilityBound = false;
@@ -97,6 +119,13 @@ function bindVisibility(): void {
   });
 }
 
+function fireTargetGain(): number {
+  if (!fireBurning) return 0;
+  return fireProximity === "fireplace"
+    ? FIRE_GAIN_FIREPLACE
+    : FIRE_GAIN_BEACH;
+}
+
 async function ensureContext(): Promise<AudioContext | null> {
   if (typeof window === "undefined") return null;
   if (!ctx) {
@@ -131,6 +160,16 @@ async function ensureContext(): Promise<AudioContext | null> {
     nightGain.connect(master);
     nightTrack = {
       gain: nightGain,
+      source: null,
+      buffer: null,
+      loading: null,
+    };
+
+    const fireGain = ctx.createGain();
+    fireGain.gain.value = 0;
+    fireGain.connect(master);
+    fireTrack = {
+      gain: fireGain,
       source: null,
       buffer: null,
       loading: null,
@@ -179,6 +218,19 @@ async function loadNight(): Promise<void> {
   await nightTrack.loading;
 }
 
+async function loadFireplace(): Promise<void> {
+  if (!fireTrack || !ctx) return;
+  if (fireTrack.buffer || fireTrack.loading) {
+    await fireTrack.loading;
+    return;
+  }
+  fireTrack.loading = (async () => {
+    fireTrack!.buffer = await fetchBuffer(FIREPLACE_SRC);
+    fireTrack!.loading = null;
+  })();
+  await fireTrack.loading;
+}
+
 function startLoop(track: LoopTrack): void {
   const audio = ctx;
   if (!audio || !track.buffer) return;
@@ -212,7 +264,7 @@ function crossfadeWeather(next: WeatherId): void {
   for (const id of WEATHER_IDS) {
     const track = weatherTracks.get(id);
     if (!track) continue;
-    const target = id === next && track.buffer ? 1 : 0;
+    const target = id === next && track.buffer ? WEATHER_GAIN[id] : 0;
     track.gain.gain.cancelScheduledValues(now);
     track.gain.gain.setValueAtTime(track.gain.gain.value, now);
     track.gain.gain.linearRampToValueAtTime(target, end);
@@ -234,6 +286,23 @@ function applyNightFade(): void {
   track.gain.gain.setValueAtTime(track.gain.gain.value, now);
   track.gain.gain.linearRampToValueAtTime(target, end);
   if (nightWanted && track.buffer && !track.source) {
+    startLoop(track);
+  }
+}
+
+function applyFireFade(fadeSec?: number): void {
+  const audio = ctx;
+  const track = fireTrack;
+  if (!audio || !track) return;
+  const now = audio.currentTime;
+  const target = track.buffer ? fireTargetGain() : 0;
+  const sec =
+    fadeSec ??
+    (target > track.gain.gain.value ? FIRE_FADE_IN_SEC : FIRE_FADE_OUT_SEC);
+  track.gain.gain.cancelScheduledValues(now);
+  track.gain.gain.setValueAtTime(track.gain.gain.value, now);
+  track.gain.gain.linearRampToValueAtTime(target, now + sec);
+  if (fireBurning && track.buffer && !track.source) {
     startLoop(track);
   }
 }
@@ -269,6 +338,12 @@ async function resumeAndApply(): Promise<void> {
     applyNightFade();
   } else {
     applyNightFade();
+  }
+  if (fireBurning) {
+    await loadFireplace();
+    applyFireFade();
+  } else {
+    applyFireFade();
   }
 }
 
@@ -307,6 +382,46 @@ export function setNightAmbience(on: boolean): void {
     if (master) {
       master.gain.value = document.hidden || muted ? 0 : 1;
     }
+  })();
+}
+
+/**
+ * Loop fireplace crackle under the weather bed while a fire is lit.
+ * Fades in ~1.5s / out ~2s. Missing file fails silently.
+ */
+export function setFireplaceBurning(on: boolean): void {
+  muted = readMuted();
+  if (on === fireBurning) return;
+  fireBurning = on;
+  bindGestureUnlock();
+  bindVisibility();
+  void (async () => {
+    await ensureContext();
+    if (on) await loadFireplace();
+    const audio = ctx;
+    if (!audio) return;
+    if (audio.state === "suspended") return;
+    applyFireFade(on ? FIRE_FADE_IN_SEC : FIRE_FADE_OUT_SEC);
+    if (master) {
+      master.gain.value = document.hidden || muted ? 0 : 1;
+    }
+  })();
+}
+
+/** Louder at the fireplace page (0.85) than on the beach (0.5). ~400ms. */
+export function setFireplaceProximity(where: FireplaceProximity): void {
+  muted = readMuted();
+  if (where === fireProximity) return;
+  fireProximity = where;
+  bindGestureUnlock();
+  bindVisibility();
+  void (async () => {
+    await ensureContext();
+    const audio = ctx;
+    if (!audio) return;
+    if (audio.state === "suspended") return;
+    if (!fireBurning) return;
+    applyFireFade(FIRE_PROXIMITY_SEC);
   })();
 }
 
@@ -386,6 +501,10 @@ export function setMuted(value: boolean): void {
     if (!value && nightWanted) {
       await loadNight();
       applyNightFade();
+    }
+    if (!value && fireBurning) {
+      await loadFireplace();
+      applyFireFade();
     }
   })();
 }

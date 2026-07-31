@@ -10,6 +10,12 @@ import {
   startCraft,
 } from "@/game/activities";
 import {
+  wearClothing,
+  unequipClothing,
+  type ClothingSlotId,
+} from "@/game/clothing";
+import { cureAilmentWithItem, tickAilmentExpiry } from "@/game/ailments";
+import {
   ACTIVITY_LABEL,
   DAY_PART_LABEL,
   HOTSPOT_ACTIVITY,
@@ -20,9 +26,11 @@ import {
   type RecipeId,
 } from "@/game/balance";
 import { beachContainerAt, containerTitle } from "@/game/containers";
+import { writeContainerDiary } from "@/game/diary";
 import { HOTSPOTS, type HotspotId } from "@/game/hotspots";
 import { ITEMS } from "@/game/items";
-import { placeLoot } from "@/game/inventory";
+import { hasItem, placeLoot } from "@/game/inventory";
+import { confirmOverflow, lootFits, makeOverflow } from "@/game/overflow";
 import {
   clearSave,
   createNewRun,
@@ -47,7 +55,14 @@ import {
   placeWaterContainer,
   waterFillLabel,
 } from "@/game/water";
-import { playSfx, setMuted, setNightAmbience, setWeatherTrack } from "@/game/audio";
+import {
+  playSfx,
+  setFireplaceBurning,
+  setFireplaceProximity,
+  setMuted,
+  setNightAmbience,
+  setWeatherTrack,
+} from "@/game/audio";
 import { weatherAt } from "@/game/weather";
 import { BeachCrate } from "./BeachCrate";
 import { ContainerPanel } from "./ContainerPanel";
@@ -56,8 +71,13 @@ import { DiarySheet } from "./DiarySheet";
 import { DurationPicker } from "./DurationPicker";
 import { EndingScreen } from "./EndingScreen";
 import { FireplaceScreen } from "./FireplaceScreen";
+import { CompassHud, WristwatchHud } from "./HudTrinkets";
 import { ItemsSheet } from "./ItemsSheet";
+import { OverflowScreen } from "./OverflowScreen";
+import { OmenWarning } from "./OmenWarning";
+import { DropTarget, PointerDragProvider } from "./pointerDrag";
 import { ResultsPanel } from "./ResultsPanel";
+import { ShelterScreen } from "./ShelterScreen";
 import { WorldScene, DEFAULT_SCENE_PROPS, type WorldSceneProps } from "./WorldScene";
 import { YouSheet } from "./YouSheet";
 import "@/scene/scene.css";
@@ -122,6 +142,7 @@ function deriveSceneProps(save: SaveState, now: number): WorldSceneProps {
     hasShelter: save.shelterTier !== "none",
     hasWater,
     waterLevel,
+    figureVisible: !save.activity,
   };
 }
 
@@ -134,7 +155,8 @@ function scenePropsEqual(a: WorldSceneProps, b: WorldSceneProps): boolean {
     a.hasFireplace === b.hasFireplace &&
     a.hasShelter === b.hasShelter &&
     a.hasWater === b.hasWater &&
-    a.waterLevel === b.waterLevel
+    a.waterLevel === b.waterLevel &&
+    a.figureVisible === b.figureVisible
   );
 }
 
@@ -151,7 +173,12 @@ export function BeachScene() {
   const [youOpen, setYouOpen] = useState(false);
   const [containerOpen, setContainerOpen] = useState(false);
   const [fireplaceOpen, setFireplaceOpen] = useState(false);
+  const [shelterOpen, setShelterOpen] = useState(false);
   const [ending, setEnding] = useState<DeathInfo | null>(null);
+  const [omenConfirm, setOmenConfirm] = useState<{
+    kind: "scour" | "cut";
+    durationId: DurationId;
+  } | null>(null);
   const [bestDays, setBestDays] = useState(0);
   const [audioMuted, setAudioMuted] = useState(false);
   const idleRef = useRef<number | null>(null);
@@ -162,10 +189,15 @@ export function BeachScene() {
   const resultsSfxRef = useRef(false);
 
   function commitSave(next: SaveState, tick = Date.now()) {
-    const weather = weatherAt(next.seed, next.runStartedAt, tick);
+    const afterAilments = tickAilmentExpiry(next, tick);
+    const weather = weatherAt(
+      afterAilments.seed,
+      afterAilments.runStartedAt,
+      tick,
+    );
     const refreshed = {
-      ...next,
-      comfort: computeComfort(next, weather),
+      ...afterAilments,
+      comfort: computeComfort(afterAilments, weather),
     };
     saveRef.current = refreshed;
     writeSave(refreshed);
@@ -249,6 +281,14 @@ export function BeachScene() {
   }, [sceneProps]);
 
   useEffect(() => {
+    setFireplaceBurning(!!save?.fireplace.lit);
+  }, [save?.fireplace.lit]);
+
+  useEffect(() => {
+    setFireplaceProximity(fireplaceOpen ? "fireplace" : "beach");
+  }, [fireplaceOpen]);
+
+  useEffect(() => {
     const open = !!save?.pendingResults;
     if (open && !resultsSfxRef.current) {
       playSfx("activity_complete");
@@ -301,6 +341,7 @@ export function BeachScene() {
     setItemsOpen(false);
     setCraftOpen(false);
     setFireplaceOpen(false);
+    setShelterOpen(false);
     setContainerOpen(false);
     setOpenSpot(null);
     setRevealed(false);
@@ -323,7 +364,9 @@ export function BeachScene() {
       diaryOpen ||
       youOpen ||
       fireplaceOpen ||
+      shelterOpen ||
       save?.pendingResults ||
+      save?.pendingOverflow ||
       containerOpen
     ) {
       return;
@@ -339,6 +382,16 @@ export function BeachScene() {
 
     if (id === "fire" && save.fireplace.built !== "none") {
       setFireplaceOpen(true);
+      setShelterOpen(false);
+      setOpenSpot(null);
+      setRevealed(false);
+      if (idleRef.current) window.clearTimeout(idleRef.current);
+      return;
+    }
+
+    if (id === "hut" && save.shelterTier !== "none") {
+      setShelterOpen(true);
+      setFireplaceOpen(false);
       setOpenSpot(null);
       setRevealed(false);
       if (idleRef.current) window.clearTimeout(idleRef.current);
@@ -366,6 +419,14 @@ export function BeachScene() {
       return;
     }
 
+    if (openSpot === "hut" && save.shelterTier === "none") {
+      setCraftOpen(true);
+      setOpenSpot(null);
+      setRevealed(false);
+      if (idleRef.current) window.clearTimeout(idleRef.current);
+      return;
+    }
+
     if (openSpot === "water" && save.waterSpot.itemId) {
       const next = drinkFromWater(save, Date.now());
       commitSave(next);
@@ -386,11 +447,38 @@ export function BeachScene() {
   function onPickDuration(durationId: DurationId) {
     if (!save || !pickerKind || pickerKind === "craft" || pickerKind === "cook")
       return;
-    const next = startActivity(save, pickerKind, durationId, Date.now());
+    const kind = pickerKind;
+    const weather = weatherAt(save.seed, save.runStartedAt, Date.now());
+    if (weather === "omen") {
+      setOmenConfirm({ kind, durationId });
+      setPickerKind(null);
+      return;
+    }
+    const next = startActivity(save, kind, durationId, Date.now());
     commitSave(next);
     setPickerKind(null);
     setOpenSpot(null);
     reveal();
+  }
+
+  function confirmOmenGo() {
+    if (!save || !omenConfirm) return;
+    const next = startActivity(
+      save,
+      omenConfirm.kind,
+      omenConfirm.durationId,
+      Date.now(),
+    );
+    commitSave(next);
+    setOmenConfirm(null);
+    setOpenSpot(null);
+    reveal();
+  }
+
+  function confirmOmenStay() {
+    setOmenConfirm(null);
+    setOpenSpot(null);
+    setRevealed(false);
   }
 
   function dismissResults() {
@@ -407,12 +495,35 @@ export function BeachScene() {
   function takeContainer() {
     if (!save || !view?.beach) return;
     const beach = view.beach;
+    const at = Date.now();
+
+    if (!lootFits(save.inventory, save.storageTier, beach.contents)) {
+      let next: SaveState = {
+        ...save,
+        collectedTickIndex: beach.tickIndex,
+        pendingOverflow: makeOverflow(
+          containerTitle(beach.tier),
+          "Washed up",
+          beach.contents,
+        ),
+        pendingResults: null,
+      };
+      next = writeContainerDiary(next, {
+        tier: beach.tier,
+        kept: beach.contents,
+        at,
+      });
+      commitSave(next);
+      setContainerOpen(false);
+      return;
+    }
+
     const { inventory, kept, lost } = placeLoot(
       save.inventory,
       save.storageTier,
       beach.contents,
     );
-    commitSave({
+    let next: SaveState = {
       ...save,
       inventory,
       collectedTickIndex: beach.tickIndex,
@@ -420,10 +531,29 @@ export function BeachScene() {
         title: containerTitle(beach.tier),
         kept,
         lost,
-        resolvedAt: Date.now(),
+        resolvedAt: at,
       },
+      pendingOverflow: null,
+    };
+    next = writeContainerDiary(next, {
+      tier: beach.tier,
+      kept,
+      at,
     });
+    commitSave(next);
     setContainerOpen(false);
+  }
+
+  function resolveOverflow(decision: {
+    keepIncoming: boolean[];
+    destroyIndices: number[];
+  }) {
+    if (!save) return;
+    const next = confirmOverflow(save, {
+      ...decision,
+      at: Date.now(),
+    });
+    commitSave(next);
   }
 
   function openItems(e: React.MouseEvent) {
@@ -434,6 +564,7 @@ export function BeachScene() {
     setDiaryOpen(false);
     setYouOpen(false);
     setFireplaceOpen(false);
+    setShelterOpen(false);
     setOpenSpot(null);
     setPickerKind(null);
     setContainerOpen(false);
@@ -449,6 +580,7 @@ export function BeachScene() {
     setDiaryOpen(false);
     setYouOpen(false);
     setFireplaceOpen(false);
+    setShelterOpen(false);
     setOpenSpot(null);
     setPickerKind(null);
     setContainerOpen(false);
@@ -458,12 +590,12 @@ export function BeachScene() {
 
   function openDiary(e: React.MouseEvent) {
     e.stopPropagation();
-    playSfx("diary");
     setDiaryOpen(true);
     setItemsOpen(false);
     setCraftOpen(false);
     setYouOpen(false);
     setFireplaceOpen(false);
+    setShelterOpen(false);
     setOpenSpot(null);
     setPickerKind(null);
     setContainerOpen(false);
@@ -478,6 +610,7 @@ export function BeachScene() {
     setCraftOpen(false);
     setDiaryOpen(false);
     setFireplaceOpen(false);
+    setShelterOpen(false);
     setOpenSpot(null);
     setPickerKind(null);
     setContainerOpen(false);
@@ -521,15 +654,33 @@ export function BeachScene() {
     commitSave(next);
   }
 
-  function onWaterDrop(e: React.DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+  function onCureAilment(
+    ailmentId: "cut_finger" | "twisted_ankle" | "cold",
+  ) {
     if (!save) return;
-    const raw = e.dataTransfer.getData("application/x-last-shore-water");
-    if (raw === "") return;
-    const index = Number(raw);
-    if (Number.isNaN(index)) return;
-    setOutside(index);
+    const next = cureAilmentWithItem(save, ailmentId, Date.now());
+    if (!next) return;
+    commitSave(next);
+  }
+
+  function onWear(inventoryIndex: number): string | null {
+    if (!save) return "Nothing to wear.";
+    const result = wearClothing(save, inventoryIndex);
+    if (!result.ok) return result.reason;
+    commitSave(result.state);
+    return null;
+  }
+
+  function onUnequip(slot: ClothingSlotId): string | null {
+    if (!save) return "Nothing worn.";
+    const result = unequipClothing(save, slot);
+    if (!result.ok) return result.reason;
+    commitSave(result.state);
+    return null;
+  }
+
+  function onWaterDrop(inventoryIndex: number) {
+    setOutside(inventoryIndex);
   }
 
   let captionTitle = openHotspot?.title ?? "";
@@ -548,6 +699,22 @@ export function BeachScene() {
     } else {
       captionBody =
         "A ring of stones waiting. Craft a Simple Fireplace to place it.";
+      captionAction = "Build";
+    }
+  } else if (live && save && openHotspot?.id === "hut") {
+    if (save.shelterTier !== "none") {
+      captionTitle =
+        save.shelterTier === "lean_to"
+          ? "Lean-to"
+          : save.shelterTier === "walled"
+            ? "Walled Shelter"
+            : "Storm-proof Shelter";
+      captionBody = "Tap again to step inside.";
+      showAction = false;
+      captionAction = null;
+    } else {
+      captionBody =
+        "A patch of shade waiting. Craft a Lean-to to claim it.";
       captionAction = "Build";
     }
   } else if (live && save && openHotspot?.id === "water") {
@@ -604,6 +771,7 @@ export function BeachScene() {
   const scene = sceneProps ?? DEFAULT_SCENE_PROPS;
 
   return (
+    <PointerDragProvider>
     <div
       className="phone"
       ref={phoneRef}
@@ -630,13 +798,12 @@ export function BeachScene() {
             <BeachCrate container={view.beach} onOpen={openContainer} />
           )}
 
-          <div
+          <DropTarget
+            id="water-spot"
             className={`water-drop${itemsOpen ? " active" : ""}`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.dataTransfer.dropEffect = "move";
-            }}
-            onDrop={onWaterDrop}
+            overClassName="drop-over"
+            accept={(p) => p.kind === "water"}
+            onDrop={(p) => onWaterDrop(p.inventoryIndex)}
           />
 
           <div className={`hud${revealed ? " reveal" : ""}`}>
@@ -649,6 +816,16 @@ export function BeachScene() {
                 </div>
               )}
             </div>
+
+            {(hasItem(save.inventory, "wristwatch") ||
+              hasItem(save.inventory, "compass")) && (
+              <div className="hud-trinkets">
+                {hasItem(save.inventory, "wristwatch") && (
+                  <WristwatchHud now={now} />
+                )}
+                {hasItem(save.inventory, "compass") && <CompassHud />}
+              </div>
+            )}
 
             <div className="vitals">
               <Vital label="W" value={save.thirst} kind="w" />
@@ -757,13 +934,20 @@ export function BeachScene() {
             </nav>
           </div>
 
-          <DiarySheet open={diaryOpen} onClose={() => setDiaryOpen(false)} />
+          <DiarySheet
+            open={diaryOpen}
+            entries={save?.diary ?? []}
+            onClose={() => setDiaryOpen(false)}
+            onOpened={() => playSfx("diary")}
+          />
 
           <YouSheet
             open={youOpen}
             save={save}
             weather={view.weather}
             onClose={() => setYouOpen(false)}
+            onCureAilment={onCureAilment}
+            onUnequip={onUnequip}
           />
 
           <ItemsSheet
@@ -774,6 +958,7 @@ export function BeachScene() {
             onSetOutside={setOutside}
             onEat={onEat}
             onDestroy={onDestroy}
+            onWear={onWear}
           />
 
           <CraftSheet
@@ -800,9 +985,33 @@ export function BeachScene() {
             }}
           />
 
+          <ShelterScreen
+            open={shelterOpen}
+            save={save}
+            onClose={() => setShelterOpen(false)}
+            onChange={(next) => {
+              commitSave(next);
+            }}
+          />
+
           <ResultsPanel
             results={save.pendingResults}
             onDismiss={dismissResults}
+          />
+
+          {save.pendingOverflow && (
+            <OverflowScreen
+              open
+              save={save}
+              overflow={save.pendingOverflow}
+              onConfirm={resolveOverflow}
+            />
+          )}
+
+          <OmenWarning
+            open={!!omenConfirm}
+            onGo={confirmOmenGo}
+            onStay={confirmOmenStay}
           />
 
           <ContainerPanel
@@ -814,5 +1023,6 @@ export function BeachScene() {
         </>
       )}
     </div>
+    </PointerDragProvider>
   );
 }

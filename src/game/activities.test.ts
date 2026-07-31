@@ -7,7 +7,8 @@ describe("activities", () => {
     let state = createNewRun(1_000_000);
     state = startActivity(state, "scour", "5m", 1_000_000);
     expect(state.activity).not.toBeNull();
-    const mid = resolveActivityIfDue(state, 1_000_000 + 60_000);
+    const beforeEnd = state.activity!.endsAt - 1;
+    const mid = resolveActivityIfDue(state, beforeEnd);
     expect(mid.activity).not.toBeNull();
     expect(mid).toBe(state);
   });

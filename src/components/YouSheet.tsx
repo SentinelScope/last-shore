@@ -1,18 +1,26 @@
 "use client";
 
+import { buildAilmentViews } from "@/game/ailments";
+import type { WeatherId } from "@/game/balance";
+import {
+  CLOTHING_SLOTS,
+  totalWornComfort,
+  type ClothingSlotId,
+} from "@/game/clothing";
+import { ITEMS, itemArtSrc } from "@/game/items";
+import type { SaveState } from "@/game/persist";
 import {
   buildLedger,
   type LedgerRow,
 } from "@/game/vitals";
-import { itemArtSrc } from "@/game/items";
-import type { SaveState } from "@/game/persist";
-import type { WeatherId } from "@/game/balance";
 
 type Props = {
   open: boolean;
   save: SaveState;
   weather: WeatherId;
   onClose: () => void;
+  onCureAilment?: (ailmentId: "cut_finger" | "twisted_ankle" | "cold") => void;
+  onUnequip?: (slot: ClothingSlotId) => string | null;
 };
 
 function formatSigned(value: number, unit?: string): string {
@@ -62,8 +70,87 @@ const BAR_META = [
   },
 ];
 
-export function YouSheet({ open, save, weather, onClose }: Props) {
+/** Percent of the paper-doll wrap — anchored to body regions on character_front.png. */
+const SLOT_POS: Record<ClothingSlotId, { left: string; top: string }> = {
+  head: { left: "50%", top: "18%" },
+  body: { left: "50%", top: "38%" },
+  legs: { left: "50%", top: "58%" },
+  feet: { left: "50%", top: "78%" },
+};
+
+function YouFigure({
+  save,
+  onUnequip,
+}: {
+  save: SaveState;
+  onUnequip?: (slot: ClothingSlotId) => string | null;
+}) {
+  const worn = save.worn ?? {
+    head: null,
+    body: null,
+    legs: null,
+    feet: null,
+  };
+  const wornTotal = totalWornComfort(worn);
+
+  return (
+    <div className="you-figure-wrap">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        className="you-figure"
+        src="/character/character_front.png"
+        alt="You, front view"
+        width={1024}
+        height={1024}
+      />
+
+      {CLOTHING_SLOTS.map((slot) => {
+        const itemId = worn[slot];
+        const pos = SLOT_POS[slot];
+        const def = itemId ? ITEMS[itemId] : null;
+        return (
+          <button
+            key={slot}
+            type="button"
+            className={`you-slot you-slot-${slot}${itemId ? " filled" : ""}`}
+            style={pos}
+            title={def ? `Remove ${def.name}` : `${slot} — empty`}
+            aria-label={def ? `Unequip ${def.name}` : `Empty ${slot} slot`}
+            disabled={!itemId}
+            onClick={() => {
+              if (!itemId || !onUnequip) return;
+              onUnequip(slot);
+            }}
+          >
+            {itemId ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                className={`you-wear you-wear-${slot}`}
+                src={itemArtSrc(itemId)}
+                alt={def?.name ?? ""}
+              />
+            ) : (
+              <span className="you-slot-empty" aria-hidden />
+            )}
+          </button>
+        );
+      })}
+
+      <p className="you-worn-line">Worn: +{wornTotal}% comfort</p>
+    </div>
+  );
+}
+
+export function YouSheet({
+  open,
+  save,
+  weather,
+  onClose,
+  onCureAilment,
+  onUnequip,
+}: Props) {
   const sections = buildLedger(save, weather);
+  const ailments = buildAilmentViews(save);
 
   return (
     <div
@@ -77,6 +164,8 @@ export function YouSheet({ open, save, weather, onClose }: Props) {
           <h1>You</h1>
           <p className="cap">What is draining you, and what is holding you</p>
         </div>
+
+        <YouFigure save={save} onUnequip={onUnequip} />
 
         <div className="you-bars">
           {BAR_META.map((b) => {
@@ -139,6 +228,45 @@ export function YouSheet({ open, save, weather, onClose }: Props) {
               </section>
             );
           })}
+
+          <section className="you-sec you-ailments">
+            <header>
+              <h2>Ailments</h2>
+            </header>
+            {ailments.length === 0 ? (
+              <p className="you-ailments-empty">
+                Nothing wrong with you today.
+              </p>
+            ) : (
+              <ul className="you-ailment-list">
+                {ailments.map((a) => (
+                  <li key={a.id} className="you-ailment">
+                    <strong>{a.label}</strong>
+                    <p>{a.impactLine}</p>
+                    <p>{a.activeLine}</p>
+                    <p>{a.cureLine}</p>
+                    {a.cureActionItemId && a.cureActionLabel && onCureAilment ? (
+                      <button
+                        type="button"
+                        className="you-cure"
+                        onClick={() => {
+                          if (
+                            a.id === "cut_finger" ||
+                            a.id === "twisted_ankle" ||
+                            a.id === "cold"
+                          ) {
+                            onCureAilment(a.id);
+                          }
+                        }}
+                      >
+                        {a.cureActionLabel}
+                      </button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </div>
       </div>
       <button

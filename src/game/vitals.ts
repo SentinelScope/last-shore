@@ -13,6 +13,21 @@ import {
   type WeatherId,
 } from "./balance";
 import { resolveActivityIfDue } from "./activities";
+import {
+  ailmentComfortPenalty,
+  ailmentHealthPerHour,
+  freakWaveDeathLine,
+  lightningDeathLine,
+  rollAilmentsForActivityMinute,
+  tickAilmentExpiry,
+} from "./ailments";
+import { totalWornComfort } from "./clothing";
+import { shelterDecorComfort } from "./shelter";
+import {
+  maybeWriteIdleDiary,
+  maybeWriteOmenDiary,
+  maybeWriteWaterFullDiary,
+} from "./diary";
 import { syncFireplace } from "./fire";
 import { removeItems } from "./inventory";
 import {
@@ -52,13 +67,15 @@ export type LedgerSection = {
   net?: LedgerRow;
 };
 
-/** Comfort from structure / fire / weather / carried comfort items. Never accumulates. */
+/** Comfort from structure / fire / weather / carried comfort / worn clothes. */
 export function computeComfort(
   state: SaveState,
   weather: WeatherId,
 ): number {
   let c = 0;
   if (state.shelterTier === "lean_to") c += COMFORT_SOURCES.lean_to;
+  else if (state.shelterTier === "walled") c += COMFORT_SOURCES.walled;
+  else if (state.shelterTier === "storm") c += COMFORT_SOURCES.storm;
   if (state.bedTier === "mat") c += COMFORT_SOURCES.mat;
   if (state.hasLogChair) c += COMFORT_SOURCES.log_chair;
   if (state.fireplace.lit) c += COMFORT_SOURCES.fire_lit;
@@ -68,7 +85,10 @@ export function computeComfort(
     const bonus = itemComfortBonus(def);
     if (bonus !== 0) c += bonus * slot.qty;
   }
+  c += totalWornComfort(state.worn);
+  c += shelterDecorComfort(state);
   c += COMFORT_WEATHER[weather] ?? 0;
+  c += ailmentComfortPenalty(state);
   return clampBar(c);
 }
 
@@ -84,6 +104,18 @@ export function buildLedger(
     comfortRows.push({
       label: "Lean-to",
       value: COMFORT_SOURCES.lean_to,
+      kind: "comf",
+    });
+  } else if (state.shelterTier === "walled") {
+    comfortRows.push({
+      label: "Walled Shelter",
+      value: COMFORT_SOURCES.walled,
+      kind: "comf",
+    });
+  } else if (state.shelterTier === "storm") {
+    comfortRows.push({
+      label: "Storm-proof Shelter",
+      value: COMFORT_SOURCES.storm,
       kind: "comf",
     });
   }
@@ -119,6 +151,39 @@ export function buildLedger(
       kind: "comf",
     });
   }
+  for (const id of state.shelterDecor ?? []) {
+    if (!id) continue;
+    const def = ITEMS[id];
+    if (!def || !isCarriedComfortItem(def)) continue;
+    const bonus = itemComfortBonus(def);
+    if (bonus === 0) continue;
+    comfortRows.push({
+      label: `${def.name} (shelter)`,
+      value: bonus,
+      kind: "comf",
+    });
+  }
+  const worn = state.worn;
+  if (worn) {
+    for (const key of ["head", "body", "legs", "feet"] as const) {
+      const id = worn[key];
+      if (!id) continue;
+      const def = ITEMS[id];
+      const bonus = totalWornComfort({
+        head: null,
+        body: null,
+        legs: null,
+        feet: null,
+        [key]: id,
+      });
+      if (bonus === 0) continue;
+      comfortRows.push({
+        label: def?.name ?? id,
+        value: bonus,
+        kind: "comf",
+      });
+    }
+  }
   const wxDelta = COMFORT_WEATHER[weather] ?? 0;
   if (wxDelta !== 0) {
     comfortRows.push({
@@ -126,6 +191,22 @@ export function buildLedger(
       value: wxDelta,
       kind: "comf",
     });
+  }
+  for (const a of state.ailments ?? []) {
+    const pen = ailmentComfortPenalty({
+      ...state,
+      ailments: [a],
+    });
+    if (pen === 0) continue;
+    const label =
+      a.id === "cut_finger"
+        ? "Cut Finger"
+        : a.id === "twisted_ankle"
+          ? "Twisted Ankle"
+          : a.id === "heatstroke"
+            ? "Heatstroke"
+            : "Cold";
+    comfortRows.push({ label, value: pen, kind: "comf" });
   }
 
   const thirstBase = 100 / THIRST_EMPTY_HOURS;
@@ -205,6 +286,15 @@ export function buildLedger(
       });
     }
   }
+  const ailmentHp = ailmentHealthPerHour(state);
+  if (ailmentHp !== 0) {
+    healthRows.push({
+      label: "Cut Finger",
+      value: ailmentHp,
+      unit: "%/h",
+      kind: "hp",
+    });
+  }
 
   const healthNet =
     healthRows.reduce((n, r) => n + r.value, 0);
@@ -279,6 +369,7 @@ export function stepBars(
     healthDelta +=
       HEALTH_REGEN_BASE_PER_HOUR + HEALTH_REGEN_PER_COMFORT * comfort;
   }
+  healthDelta += ailmentHealthPerHour(state);
 
   const health = clampBar(state.health + healthDelta * dtHours);
 
@@ -359,19 +450,74 @@ export function catchUp(state: SaveState, now: number): CatchUpResult {
     const weather = weatherAt(s.seed, s.runStartedAt, t);
     const comfort = computeComfort(s, weather);
 
+    // Omen diary when the red sky first arrives
+    const prevWx = weatherAt(
+      s.seed,
+      s.runStartedAt,
+      Math.max(s.runStartedAt, t - MINUTE_MS),
+    );
+    if (weather === "omen" && prevWx !== "omen") {
+      s = maybeWriteOmenDiary(s, t);
+    }
+
     // 1–2: bar decay then health (stepBars does thirst/hunger then health)
     s = stepBars(s, comfort, dtHours);
 
     // 3: fire burn / storm
     s = syncFireplace(s, stepEnd);
 
-    // 4: water fill is derived from wall clock — nothing to write
+    // 4: water brim transition → diary
+    s = maybeWriteWaterFullDiary(s, stepEnd);
 
-    // 5: activity completion
+    // 5: ailment wait-out / thirst cure, then outdoor activity rolls this minute
+    s = tickAilmentExpiry(s, stepEnd);
+    if (
+      s.activity &&
+      t >= s.activity.startedAt &&
+      t < s.activity.endsAt
+    ) {
+      const rolled = rollAilmentsForActivityMinute(
+        s,
+        s.activity.kind,
+        weather,
+        t,
+      );
+      s = rolled.state;
+      if (rolled.death) {
+        const at = rolled.death.at;
+        const days = dayNumber(s.runStartedAt, at);
+        const line =
+          rolled.death.cause === "freak_wave"
+            ? freakWaveDeathLine(days)
+            : lightningDeathLine(days);
+        return {
+          state: { ...s, lastSimulatedAt: at },
+          death: {
+            at,
+            days,
+            line,
+          },
+        };
+      }
+    }
+
+    // 6: activity completion (also writes activity diary)
     s = resolveActivityIfDue(s, stepEnd);
+
+    // 7: idle observations every 12h
+    s = maybeWriteIdleDiary(s, stepEnd);
 
     t = stepEnd;
     s = { ...s, lastSimulatedAt: t };
+
+    // Recompute comfort after ailment changes this step
+    s = {
+      ...s,
+      comfort: computeComfort(
+        s,
+        weatherAt(s.seed, s.runStartedAt, t),
+      ),
+    };
 
     if (s.health <= 0) {
       const at = t;

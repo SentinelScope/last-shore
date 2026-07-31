@@ -25,6 +25,14 @@ function bareState(inventory: SaveState["inventory"] = []): SaveState {
     shelterTier: "none",
     bedTier: "none",
     hasLogChair: false,
+    diary: [],
+    diaryIdleRemaining: [],
+    diaryLastIdleAt: 0,
+    diaryWaterFullNoted: false,
+    ailments: [],
+    worn: { head: null, body: null, legs: null, feet: null },
+    shelterDecor: [null, null, null],
+    pendingOverflow: null,
   };
 }
 

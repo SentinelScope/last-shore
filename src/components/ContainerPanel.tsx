@@ -2,14 +2,12 @@
 
 import { containerTitle, type BeachContainer } from "@/game/containers";
 import { ITEMS, itemArtSrc } from "@/game/items";
-import type { InventorySlot } from "@/game/persist";
 
 type Props = {
   container: BeachContainer | null;
   open: boolean;
   onClose: () => void;
   onTake: () => void;
-  preview?: { kept: InventorySlot[]; lost: InventorySlot[] } | null;
 };
 
 export function ContainerPanel({
@@ -17,7 +15,6 @@ export function ContainerPanel({
   open,
   onClose,
   onTake,
-  preview,
 }: Props) {
   if (!container || !open) return null;
 
@@ -32,7 +29,7 @@ export function ContainerPanel({
         <p className="results-eyebrow">Washed up</p>
         <h2>{containerTitle(container.tier)}</h2>
         <p className="container-blurb">
-          Everything inside. Take what fits — the rest goes back to the sea.
+          Everything inside. Take it all — if there is no room, you will choose.
         </p>
 
         <ul className="results-list container-loot">
@@ -43,21 +40,18 @@ export function ContainerPanel({
               <li key={`${slot.itemId}-${i}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={itemArtSrc(def.id)} alt="" />
-                <span>{def.name}</span>
+                <span>
+                  {def.name}
+                  {slot.qty > 1 ? ` ×${slot.qty}` : ""}
+                </span>
               </li>
             );
           })}
         </ul>
 
-        {preview && preview.lost.length > 0 && (
-          <p className="container-warn">
-            You only have room for some of this. The rest will be lost.
-          </p>
-        )}
-
         <div className="container-acts">
           <button type="button" className="sheetClose solid" onClick={onTake}>
-            Take what fits
+            Take
           </button>
           <button type="button" className="sheetClose" onClick={onClose}>
             Leave it

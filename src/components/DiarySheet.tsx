@@ -1,13 +1,28 @@
 "use client";
 
+import {
+  deltaClass,
+  deltaLabel,
+  groupDiaryByDay,
+  type DiaryEntry,
+} from "@/game/diary";
+
 type Props = {
   open: boolean;
+  entries: DiaryEntry[];
   onClose: () => void;
-  /** Hook for page-flip SFX once audio is wired. */
+  /** Page-flip SFX after the sheet fades in. */
   onOpened?: () => void;
 };
 
-export function DiarySheet({ open, onClose, onOpened }: Props) {
+function formatDelta(amount: number): string {
+  const sign = amount > 0 ? "+" : "−";
+  return `${sign}${Math.abs(amount)}`;
+}
+
+export function DiarySheet({ open, entries, onClose, onOpened }: Props) {
+  const groups = groupDiaryByDay(entries);
+
   return (
     <div
       className={`sheet${open ? " on" : ""}`}
@@ -16,7 +31,11 @@ export function DiarySheet({ open, onClose, onOpened }: Props) {
         if (e.target === e.currentTarget) onClose();
       }}
       onTransitionEnd={(e) => {
-        if (open && e.propertyName === "opacity" && e.target === e.currentTarget) {
+        if (
+          open &&
+          e.propertyName === "opacity" &&
+          e.target === e.currentTarget
+        ) {
           onOpened?.();
         }
       }}
@@ -27,57 +46,39 @@ export function DiarySheet({ open, onClose, onOpened }: Props) {
           <h1>The Shore Log</h1>
           <div className="sub">Written in salt and charcoal</div>
 
-          <h2>Day 14</h2>
-          <ul>
-            <li>
-              Rain overnight. The cup filled to the brim{" "}
-              <span className="d water">+18 Water</span>
-            </li>
-            <li>
-              Found a crab under a rock. Cooked it before dark{" "}
-              <span className="d food">+10 Food</span>
-            </li>
-            <li>
-              Fire held through the wind{" "}
-              <span className="d comf">+15 Comfort</span>
-            </li>
-          </ul>
+          {groups.length === 0 ? (
+            <p className="fade">
+              The first page is still blank. The charcoal is ready.
+            </p>
+          ) : (
+            groups.map((group) => (
+              <section key={group.dayNumber}>
+                <h2>Day {group.dayNumber}</h2>
+                <ul>
+                  {group.entries.map((entry) => (
+                    <li key={entry.id}>
+                      {entry.text}
+                      {entry.deltas.map((d, i) => (
+                        <span
+                          key={`${entry.id}-${d.stat}-${i}`}
+                          className={`d ${deltaClass(d.stat)}`}
+                        >
+                          {formatDelta(d.amount)} {deltaLabel(d.stat)}
+                        </span>
+                      ))}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))
+          )}
 
-          <h2>Day 13</h2>
-          <ul>
-            <li>
-              Cut three trunks before noon{" "}
-              <span className="d food">−8 Food</span>
-              <span className="d water">−12 Water</span>
-            </li>
-            <li>
-              Finished the lean-to. Shade at last{" "}
-              <span className="d comf">+10 Comfort</span>
-            </li>
-            <li>
-              Scraped a knuckle on coral. Bound it{" "}
-              <span className="d hp">−4 Health</span>
-            </li>
-          </ul>
-
-          <h2>Day 12</h2>
-          <ul>
-            <li>
-              Scoured the tideline until the light went gold. One coconut, two
-              stones, a matchbox that still struck{" "}
-              <span className="d food">+5 Food</span>
-              <span className="d water">+10 Water</span>
-            </li>
-            <li>
-              Slept badly on sand. The mat can wait{" "}
-              <span className="d comf">−6 Comfort</span>
-            </li>
-          </ul>
-
-          <p className="fade">
-            Older pages have gone soft in the damp. The charcoal runs when it
-            rains.
-          </p>
+          {groups.length > 0 ? (
+            <p className="fade">
+              Older pages have gone soft in the damp. The charcoal runs when it
+              rains.
+            </p>
+          ) : null}
         </div>
         <div className="rod" aria-hidden />
       </div>

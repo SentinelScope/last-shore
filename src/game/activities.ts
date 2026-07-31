@@ -11,6 +11,7 @@ import {
   type RecipeId,
   type ScourLootId,
 } from "./balance";
+import { writeActivityDiary } from "./diary";
 import { syncFireplace } from "./fire";
 import {
   hasItem,
@@ -20,6 +21,7 @@ import {
   removeItems,
   type LootPile,
 } from "./inventory";
+import { lootFits, makeOverflow } from "./overflow";
 import type {
   ActiveActivity,
   PendingResults,
@@ -100,6 +102,24 @@ export function canStartCraft(
   }
   if (recipe.effect === "lean_to" && state.shelterTier !== "none") {
     return { ok: false, reason: "Shelter already built." };
+  }
+  if (recipe.effect === "walled" && state.shelterTier !== "lean_to") {
+    return {
+      ok: false,
+      reason:
+        state.shelterTier === "none"
+          ? "Build a lean-to first."
+          : "Already past a lean-to.",
+    };
+  }
+  if (recipe.effect === "storm" && state.shelterTier !== "walled") {
+    return {
+      ok: false,
+      reason:
+        state.shelterTier === "storm"
+          ? "Already storm-proof."
+          : "Needs a walled shelter first.",
+    };
   }
   if (recipe.tool && !hasItem(state.inventory, recipe.tool)) {
     const toolName = recipe.tool.replace(/_/g, " ");
@@ -187,12 +207,21 @@ function resolveCraft(state: SaveState, now: number): SaveState {
   let shelterTier = state.shelterTier;
   const kept: LootPile = [];
   const lost: LootPile = [];
+  let pendingOverflow = state.pendingOverflow;
 
   if (recipe.result) {
-    const placed = placeLoot(inventory, storageTier, [recipe.result]);
-    inventory = placed.inventory;
-    kept.push(...placed.kept);
-    lost.push(...placed.lost);
+    if (lootFits(inventory, storageTier, [recipe.result])) {
+      const placed = placeLoot(inventory, storageTier, [recipe.result]);
+      inventory = placed.inventory;
+      kept.push(...placed.kept);
+      lost.push(...placed.lost);
+    } else {
+      pendingOverflow = makeOverflow(
+        `Crafted · ${recipe.name}`,
+        "Found",
+        [recipe.result],
+      );
+    }
   }
 
   if (recipe.effect === "satchel") {
@@ -214,6 +243,34 @@ function resolveCraft(state: SaveState, now: number): SaveState {
   if (recipe.effect === "lean_to") {
     shelterTier = "lean_to";
   }
+  if (recipe.effect === "walled") {
+    shelterTier = "walled";
+  }
+  if (recipe.effect === "storm") {
+    shelterTier = "storm";
+  }
+
+  if (pendingOverflow && recipe.result) {
+    let next: SaveState = {
+      ...state,
+      activity: null,
+      inventory,
+      storageTier,
+      fireplace,
+      bedTier,
+      hasLogChair,
+      shelterTier,
+      pendingOverflow,
+      pendingResults: null,
+    };
+    return writeActivityDiary(next, {
+      kind: "craft",
+      recipeName: recipe.name,
+      kept: [recipe.result],
+      lost: [],
+      at: now,
+    });
+  }
 
   const pendingResults: PendingResults = {
     title: `Crafted · ${recipe.name}`,
@@ -231,7 +288,7 @@ function resolveCraft(state: SaveState, now: number): SaveState {
     pendingResults.kept = [];
   }
 
-  return {
+  let next: SaveState = {
     ...state,
     activity: null,
     inventory,
@@ -241,7 +298,15 @@ function resolveCraft(state: SaveState, now: number): SaveState {
     hasLogChair,
     shelterTier,
     pendingResults,
+    pendingOverflow: null,
   };
+  return writeActivityDiary(next, {
+    kind: "craft",
+    recipeName: recipe.name,
+    kept: pendingResults.kept,
+    lost,
+    at: now,
+  });
 }
 
 function resolveCook(state: SaveState, now: number): SaveState {
@@ -250,23 +315,23 @@ function resolveCook(state: SaveState, now: number): SaveState {
     return { ...state, activity: null };
   }
 
-  const next = syncFireplace(state, now);
+  const synced = syncFireplace(state, now);
   const slotIndex = activity.cookSlotIndex;
-  const foodSlots = [...next.fireplace.slots.food];
+  const foodSlots = [...synced.fireplace.slots.food];
   const current = foodSlots[slotIndex];
   if (!current || current.itemId !== activity.cookItemId) {
-    return { ...next, activity: null };
+    return { ...synced, activity: null };
   }
 
   const resultId = COOK_RESULT[activity.cookItemId] ?? activity.cookItemId;
   foodSlots[slotIndex] = { itemId: resultId, qty: 1 };
 
-  return {
-    ...next,
+  let next: SaveState = {
+    ...synced,
     activity: null,
     fireplace: {
-      ...next.fireplace,
-      slots: { ...next.fireplace.slots, food: foodSlots },
+      ...synced.fireplace,
+      slots: { ...synced.fireplace.slots, food: foodSlots },
     },
     pendingResults: {
       title: `Cooked · ${resultId.replace(/_/g, " ")}`,
@@ -275,6 +340,13 @@ function resolveCook(state: SaveState, now: number): SaveState {
       resolvedAt: now,
     },
   };
+  return writeActivityDiary(next, {
+    kind: "cook",
+    cookItemId: resultId,
+    kept: [{ itemId: resultId, qty: 1 }],
+    lost: [],
+    at: now,
+  });
 }
 
 export function resolveActivityIfDue(state: SaveState, now: number): SaveState {
@@ -289,13 +361,34 @@ export function resolveActivityIfDue(state: SaveState, now: number): SaveState {
   }
 
   const loot = rollActivityLoot(activity, state.seed);
+
+  if (!lootFits(state.inventory, state.storageTier, loot)) {
+    let next: SaveState = {
+      ...state,
+      activity: null,
+      pendingOverflow: makeOverflow(
+        ACTIVITY_LABEL[activity.kind],
+        "Found",
+        loot,
+      ),
+      pendingResults: null,
+    };
+    return writeActivityDiary(next, {
+      kind: activity.kind,
+      durationId: activity.durationId,
+      kept: mergeLoot(loot),
+      lost: [],
+      at: now,
+    });
+  }
+
   const { inventory, kept, lost } = placeLoot(
     state.inventory,
     state.storageTier,
     loot,
   );
 
-  return {
+  let next: SaveState = {
     ...state,
     activity: null,
     inventory,
@@ -305,7 +398,15 @@ export function resolveActivityIfDue(state: SaveState, now: number): SaveState {
       lost,
       resolvedAt: now,
     },
+    pendingOverflow: null,
   };
+  return writeActivityDiary(next, {
+    kind: activity.kind,
+    durationId: activity.durationId,
+    kept,
+    lost,
+    at: now,
+  });
 }
 
 export function clearPendingResults(state: SaveState): SaveState {

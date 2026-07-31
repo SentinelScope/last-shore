@@ -89,6 +89,7 @@ export function placeWaterContainer(
       placedAt: now,
       drunkPercent: 0,
     },
+    diaryWaterFullNoted: false,
   };
 }
 

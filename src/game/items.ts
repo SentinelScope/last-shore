@@ -2,6 +2,8 @@
  * Item definitions — ids match PNG filenames in public/items/.
  */
 
+import { assertItemArt, itemArtSrc } from "./itemArt";
+
 export type ItemTag = [kind: "water" | "food" | "hp" | "comf", label: string];
 
 export type ItemDef = {
@@ -11,7 +13,6 @@ export type ItemDef = {
   description: string;
   stack: number;
   tags: ItemTag[];
-  art?: string;
 };
 
 function mat(id: string, name: string, stack: number, description: string): ItemDef {
@@ -97,88 +98,67 @@ export const ITEMS: Record<string, ItemDef> = {
       ["water", "+2 Water (cooked)"],
     ],
   ),
-  cooked_crab: {
-    ...food(
-      "cooked_crab",
-      "Cooked Crab",
-      5,
-      "The shell is blackened. The meat is sweet.",
-      [
-        ["food", "+10 Food"],
-        ["water", "+2 Water"],
-      ],
-    ),
-    art: "crab.png",
-  },
-  small_fish: {
-    ...food(
-      "small_fish",
-      "Small Fish",
-      5,
-      "Barely a mouthful once cooked. Raw, it is nothing.",
-      [["food", "+15 Food (cooked)"]],
-    ),
-    art: "small_fish.png",
-  },
-  cooked_small_fish: {
-    ...food(
-      "cooked_small_fish",
-      "Cooked Small Fish",
-      5,
-      "Flaked white over the coals.",
-      [
-        ["food", "+15 Food"],
-        ["water", "+3 Water"],
-      ],
-    ),
-    art: "small_fish.png",
-  },
-  medium_fish: {
-    ...food(
-      "medium_fish",
-      "Medium Fish",
-      5,
-      "A proper catch. Cook it.",
-      [["food", "+25 Food (cooked)"]],
-    ),
-    art: "medium_fish.png",
-  },
-  cooked_medium_fish: {
-    ...food(
-      "cooked_medium_fish",
-      "Cooked Medium Fish",
-      5,
-      "Hot, oily, enough to matter.",
-      [
-        ["food", "+25 Food"],
-        ["water", "+5 Water"],
-      ],
-    ),
-    art: "medium_fish.png",
-  },
-  large_fish: {
-    ...food(
-      "large_fish",
-      "Large Fish",
-      3,
-      "Heavy in the hand. Needs the fire.",
-      [["food", "+40 Food (cooked)"]],
-    ),
-    art: "large_fish.png",
-  },
-  cooked_large_fish: {
-    ...food(
-      "cooked_large_fish",
-      "Cooked Large Fish",
-      3,
-      "A feast by island standards.",
-      [
-        ["food", "+40 Food"],
-        ["water", "+8 Water"],
-      ],
-    ),
-    art: "large_fish.png",
-  },
+  cooked_crab: food(
+    "cooked_crab",
+    "Cooked Crab",
+    5,
+    "The shell is blackened. The meat is sweet.",
+    [
+      ["food", "+10 Food"],
+      ["water", "+2 Water"],
+    ],
+  ),
+  small_fish: food(
+    "small_fish",
+    "Small Fish",
+    5,
+    "Barely a mouthful once cooked. Raw, it is nothing.",
+    [["food", "+15 Food (cooked)"]],
+  ),
+  cooked_small_fish: food(
+    "cooked_small_fish",
+    "Cooked Small Fish",
+    5,
+    "Flaked white over the coals.",
+    [
+      ["food", "+15 Food"],
+      ["water", "+3 Water"],
+    ],
+  ),
+  medium_fish: food(
+    "medium_fish",
+    "Medium Fish",
+    5,
+    "A proper catch. Cook it.",
+    [["food", "+25 Food (cooked)"]],
+  ),
+  cooked_medium_fish: food(
+    "cooked_medium_fish",
+    "Cooked Medium Fish",
+    5,
+    "Hot, oily, enough to matter.",
+    [
+      ["food", "+25 Food"],
+      ["water", "+5 Water"],
+    ],
+  ),
+  large_fish: food(
+    "large_fish",
+    "Large Fish",
+    3,
+    "Heavy in the hand. Needs the fire.",
+    [["food", "+40 Food (cooked)"]],
+  ),
+  cooked_large_fish: food(
+    "cooked_large_fish",
+    "Cooked Large Fish",
+    3,
+    "A feast by island standards.",
+    [
+      ["food", "+40 Food"],
+      ["water", "+8 Water"],
+    ],
+  ),
   granola_bar: food(
     "granola_bar",
     "Granola Bar",
@@ -364,6 +344,18 @@ export const ITEMS: Record<string, ItemDef> = {
     "Still ticking. You have stopped checking it.",
     5,
   ),
+  compass: comfort(
+    "compass",
+    "Compass",
+    "Always points north. North is the sea. You had worked that out.",
+    3,
+  ),
+  candle: comfort(
+    "candle",
+    "Candle",
+    "Half gone. The wick still takes a flame.",
+    3,
+  ),
   message_bottle: {
     id: "message_bottle",
     name: "Message in a Bottle",
@@ -380,6 +372,14 @@ export const ITEMS: Record<string, ItemDef> = {
     stack: 1,
     tags: [],
   },
+  fibre_hat: {
+    id: "fibre_hat",
+    name: "Plant Fibre Hat",
+    type: "Clothing · head",
+    description: "Woven close. Keeps the worst of the sun off.",
+    stack: 1,
+    tags: [["comf", "+1 Comfort"]],
+  },
   hat: {
     id: "hat",
     name: "Hat",
@@ -387,6 +387,14 @@ export const ITEMS: Record<string, ItemDef> = {
     description: "Keeps the sun off. A little.",
     stack: 1,
     tags: [["comf", "+3 Comfort"]],
+  },
+  fibre_shirt: {
+    id: "fibre_shirt",
+    name: "Plant Fibre Shirt",
+    type: "Clothing · body",
+    description: "Rough weave. Better than bare shoulders.",
+    stack: 1,
+    tags: [["comf", "+2 Comfort"]],
   },
   shirt: {
     id: "shirt",
@@ -396,6 +404,14 @@ export const ITEMS: Record<string, ItemDef> = {
     stack: 1,
     tags: [["comf", "+5 Comfort"]],
   },
+  fibre_pants: {
+    id: "fibre_pants",
+    name: "Plant Fibre Pants",
+    type: "Clothing · legs",
+    description: "Tied at the waist with string. They hold.",
+    stack: 1,
+    tags: [["comf", "+2 Comfort"]],
+  },
   pants: {
     id: "pants",
     name: "Pants",
@@ -403,6 +419,22 @@ export const ITEMS: Record<string, ItemDef> = {
     description: "One pocket still holds.",
     stack: 1,
     tags: [["comf", "+4 Comfort"]],
+  },
+  fibre_sandals: {
+    id: "fibre_sandals",
+    name: "Plant Fibre Sandals",
+    type: "Clothing · feet",
+    description: "Thin soles. The sand still gets in.",
+    stack: 1,
+    tags: [["comf", "+1 Comfort"]],
+  },
+  pair_of_boots: {
+    id: "pair_of_boots",
+    name: "Pair of Boots",
+    type: "Clothing · feet",
+    description: "Heavy. One lace is gone.",
+    stack: 1,
+    tags: [["comf", "+2 Comfort"]],
   },
   sandals: {
     id: "sandals",
@@ -496,17 +528,14 @@ export const ITEMS: Record<string, ItemDef> = {
     id: "satchel",
     name: "Satchel",
     type: "Storage",
-    description: "Woven fibre. Ten slots where the sand held five.",
+    description: "Woven fibre. Twelve slots where the sand held eight.",
     stack: 1,
     tags: [],
   },
 };
 
-export function itemArtSrc(id: string): string {
-  const def = ITEMS[id];
-  const file = def?.art ?? `${id}.png`;
-  return `/items/${file}`;
-}
+assertItemArt(ITEMS);
+export { itemArtSrc };
 
 /** Flat comfort points from a `comf` tag (e.g. "+4 Comfort" → 4). */
 export function itemComfortBonus(def: ItemDef): number {

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   EAT_EFFECT,
   STORAGE_TIERS,
+  storageSlotCount,
   WATER_CAPACITY,
   type StorageTierId,
 } from "@/game/balance";
@@ -14,6 +15,7 @@ import {
 } from "@/game/items";
 import { isWaterContainer } from "@/game/inventory";
 import type { InventorySlot } from "@/game/persist";
+import { usePointerDrag } from "./pointerDrag";
 
 type Props = {
   open: boolean;
@@ -23,6 +25,7 @@ type Props = {
   onSetOutside?: (inventoryIndex: number) => void;
   onEat?: (inventoryIndex: number) => void;
   onDestroy?: (inventoryIndex: number, qty: number) => void;
+  onWear?: (inventoryIndex: number) => string | null;
 };
 
 export function ItemsSheet({
@@ -33,13 +36,17 @@ export function ItemsSheet({
   onSetOutside,
   onEat,
   onDestroy,
+  onWear,
 }: Props) {
+  const { bindDraggable } = usePointerDrag();
   const [selected, setSelected] = useState<number | null>(null);
   const [destroyQty, setDestroyQty] = useState(1);
   const [confirmDestroy, setConfirmDestroy] = useState(false);
-  const tier = STORAGE_TIERS[storageTier];
+  const [actionReason, setActionReason] = useState<string | null>(null);
+  const slots = storageSlotCount(storageTier);
   const used = inventory.length;
-  const free = Math.max(0, tier.slots - used);
+  const free = Math.max(0, slots - used);
+  const label = STORAGE_TIERS[storageTier].label;
   const selectedSlot = selected !== null ? inventory[selected] : null;
   const selectedDef = selectedSlot ? ITEMS[selectedSlot.itemId] : null;
 
@@ -47,12 +54,14 @@ export function ItemsSheet({
     if (!open) {
       setSelected(null);
       setConfirmDestroy(false);
+      setActionReason(null);
     }
   }, [open]);
 
   useEffect(() => {
     if (selectedSlot) setDestroyQty(selectedSlot.qty);
     else setConfirmDestroy(false);
+    setActionReason(null);
   }, [selected, selectedSlot]);
 
   function handleAction(action: string) {
@@ -60,6 +69,16 @@ export function ItemsSheet({
     if (action === "Eat" && onEat) {
       onEat(selected);
       setSelected(null);
+      return;
+    }
+    if (action === "Wear" && onWear) {
+      const reason = onWear(selected);
+      if (reason) {
+        setActionReason(reason);
+        return;
+      }
+      setSelected(null);
+      setActionReason(null);
       return;
     }
     if (action === "Destroy") {
@@ -92,7 +111,7 @@ export function ItemsSheet({
         <div className="crateTop">
           <h1>Items</h1>
           <div className="cap">
-            {used} of {tier.slots} slots · {tier.label}
+            {used} of {slots} slots · {label}
           </div>
         </div>
 
@@ -101,25 +120,46 @@ export function ItemsSheet({
             const def = ITEMS[slot.itemId];
             if (!def) return null;
             const water = isWaterContainer(slot.itemId);
+            const select = () => {
+              setSelected(i);
+              setConfirmDestroy(false);
+              setActionReason(null);
+            };
+
+            if (water) {
+              const bind = bindDraggable({
+                sourceKey: `items-water-${i}`,
+                payload: {
+                  kind: "water",
+                  itemId: slot.itemId,
+                  artSrc: itemArtSrc(def.id),
+                  inventoryIndex: i,
+                },
+                onTap: select,
+              });
+              return (
+                <button
+                  key={`${slot.itemId}-${i}`}
+                  type="button"
+                  {...bind}
+                  className={`slot ${bind.className}`}
+                  data-sel={selected === i ? "" : undefined}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img className="ic" src={itemArtSrc(def.id)} alt="" />
+                  <span className="nm">{def.name}</span>
+                  {slot.qty > 1 && <span className="qty">×{slot.qty}</span>}
+                </button>
+              );
+            }
+
             return (
               <button
                 key={`${slot.itemId}-${i}`}
                 type="button"
                 className="slot"
                 data-sel={selected === i ? "" : undefined}
-                draggable={water}
-                onDragStart={(e) => {
-                  if (!water) return;
-                  e.dataTransfer.setData(
-                    "application/x-last-shore-water",
-                    String(i),
-                  );
-                  e.dataTransfer.effectAllowed = "move";
-                }}
-                onClick={() => {
-                  setSelected(i);
-                  setConfirmDestroy(false);
-                }}
+                onClick={select}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img className="ic" src={itemArtSrc(def.id)} alt="" />
@@ -137,7 +177,7 @@ export function ItemsSheet({
         <div className="detail">
           {!selectedDef || !selectedSlot || selected === null ? (
             <div className="empty">
-              {tier.slots} slots · {tier.label}.
+              {slots} slots · {label}.
               <br />
               Drag a cup to the water spot, or use Set outside.
             </div>
@@ -204,6 +244,9 @@ export function ItemsSheet({
                     </span>
                   ))}
                 </div>
+              )}
+              {actionReason && (
+                <p className="wear-block">{actionReason}</p>
               )}
               <div className="acts">
                 {isWaterContainer(selectedSlot.itemId) && onSetOutside && (

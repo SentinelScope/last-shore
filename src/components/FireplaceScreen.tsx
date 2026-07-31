@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   FIRE_FUEL_MAX,
   FIRE_LIGHT_HOLD_MS,
@@ -19,6 +19,11 @@ import {
 } from "@/game/fire";
 import { ITEMS, itemArtSrc } from "@/game/items";
 import type { InventorySlot, SaveState } from "@/game/persist";
+import {
+  DropTarget,
+  usePointerDrag,
+  type PointerDragPayload,
+} from "./pointerDrag";
 
 const SLOT_HINTS = {
   ignition: "Flint, Wooden Matches, Lighter",
@@ -27,7 +32,7 @@ const SLOT_HINTS = {
   food: "Fish, Crab, Can of Food, or a Cooking Pan",
 } as const;
 
-type DropTarget =
+type DropKind =
   | { kind: "ignition" }
   | { kind: "tinder" }
   | { kind: "fuel" }
@@ -114,6 +119,41 @@ function SlotArt({
   );
 }
 
+function FireplaceSlot({
+  id,
+  target,
+  className,
+  title,
+  acceptDrop,
+  onPlace,
+  onTake,
+  children,
+}: {
+  id: string;
+  target: DropKind;
+  className: string;
+  title?: string;
+  acceptDrop: (itemId: string, target: DropKind) => boolean;
+  onPlace: (inventoryIndex: number, target: DropKind) => void;
+  onTake: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <DropTarget
+      id={id}
+      as="button"
+      className={className}
+      overClassName="over"
+      title={title}
+      accept={(p) => acceptDrop(p.itemId, target)}
+      onDrop={(p) => onPlace(p.inventoryIndex, target)}
+      onClick={onTake}
+    >
+      {children}
+    </DropTarget>
+  );
+}
+
 export function FireplaceScreen({
   open,
   save,
@@ -121,8 +161,8 @@ export function FireplaceScreen({
   onClose,
   onChange,
 }: Props) {
+  const { bindDraggable } = usePointerDrag();
   const [holdProgress, setHoldProgress] = useState(0);
-  const [dragOver, setDragOver] = useState<string | null>(null);
   const holdRaf = useRef<number | null>(null);
   const holdStart = useRef<number | null>(null);
   const holding = useRef(false);
@@ -193,7 +233,7 @@ export function FireplaceScreen({
     if (holding.current) cancelHold();
   }
 
-  function acceptDrop(itemId: string, target: DropTarget): boolean {
+  function acceptDrop(itemId: string, target: DropKind): boolean {
     if (target.kind === "ignition") return isIgnition(itemId);
     if (target.kind === "tinder") return itemId === "tinder";
     if (target.kind === "fuel") return itemId === "wood";
@@ -202,21 +242,10 @@ export function FireplaceScreen({
     return isCookable(itemId);
   }
 
-  function onInvDragStart(e: React.DragEvent, index: number) {
-    e.dataTransfer.setData("application/x-last-shore-inv", String(index));
-    e.dataTransfer.effectAllowed = "move";
-  }
-
-  function onDropTarget(e: React.DragEvent, target: DropTarget) {
-    e.preventDefault();
-    setDragOver(null);
-    const raw = e.dataTransfer.getData("application/x-last-shore-inv");
-    if (raw === "") return;
-    const index = Number(raw);
-    if (Number.isNaN(index)) return;
-    const slot = save.inventory[index];
+  function onPlace(inventoryIndex: number, target: DropKind) {
+    const slot = save.inventory[inventoryIndex];
     if (!slot || !acceptDrop(slot.itemId, target)) return;
-    const next = placeInFireplace(save, index, target, Date.now());
+    const next = placeInFireplace(save, inventoryIndex, target, Date.now());
     if (next) onChange(next);
   }
 
@@ -259,71 +288,64 @@ export function FireplaceScreen({
         <div className="fp-slots">
           <div className="fp-slot ignition">
             <span className="fp-slot-label">Ignition</span>
-            <button
-              type="button"
-              className={`fp-slot-box${dragOver === "ignition" ? " over" : ""}`}
+            <FireplaceSlot
+              id="fp-ignition"
+              target={{ kind: "ignition" }}
+              className="fp-slot-box"
               title={fp.slots.ignition ? undefined : SLOT_HINTS.ignition}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragOver("ignition");
-              }}
-              onDragLeave={() => setDragOver(null)}
-              onDrop={(e) => onDropTarget(e, { kind: "ignition" })}
-              onClick={() => take({ kind: "ignition" })}
+              acceptDrop={acceptDrop}
+              onPlace={onPlace}
+              onTake={() => take({ kind: "ignition" })}
             >
               <SlotArt slot={fp.slots.ignition} />
               <EmptySlotHint
                 hint={SLOT_HINTS.ignition}
                 empty={!fp.slots.ignition}
               />
-            </button>
+            </FireplaceSlot>
           </div>
 
           <div className="fp-slot tinder">
             <span className="fp-slot-label">Tinder</span>
-            <button
-              type="button"
-              className={`fp-slot-box${dragOver === "tinder" ? " over" : ""}`}
+            <FireplaceSlot
+              id="fp-tinder"
+              target={{ kind: "tinder" }}
+              className="fp-slot-box"
               title={fp.slots.tinder ? undefined : SLOT_HINTS.tinder}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragOver("tinder");
-              }}
-              onDragLeave={() => setDragOver(null)}
-              onDrop={(e) => onDropTarget(e, { kind: "tinder" })}
-              onClick={() => take({ kind: "tinder" })}
+              acceptDrop={acceptDrop}
+              onPlace={onPlace}
+              onTake={() => take({ kind: "tinder" })}
             >
               <SlotArt slot={fp.slots.tinder} />
               <EmptySlotHint
                 hint={SLOT_HINTS.tinder}
                 empty={!fp.slots.tinder}
               />
-            </button>
+            </FireplaceSlot>
           </div>
 
           <div className="fp-slot fuel">
             <span className="fp-slot-label">Fuel</span>
-            <button
-              type="button"
-              className={`fp-slot-box${dragOver === "fuel" ? " over" : ""}`}
+            <FireplaceSlot
+              id="fp-fuel"
+              target={{ kind: "fuel" }}
+              className="fp-slot-box"
               title={fp.slots.fuelWood >= 1 ? undefined : SLOT_HINTS.fuel}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragOver("fuel");
-              }}
-              onDragLeave={() => setDragOver(null)}
-              onDrop={(e) => onDropTarget(e, { kind: "fuel" })}
-              onClick={() => take({ kind: "fuel", qty: 1 })}
+              acceptDrop={acceptDrop}
+              onPlace={onPlace}
+              onTake={() => take({ kind: "fuel", qty: 1 })}
             >
               <SlotArt slot={null} woodCount={fp.slots.fuelWood} />
               {fp.slots.fuelWood < 1 && (
-                <span style={{ fontSize: 10, opacity: 0.4 }}>0/{FIRE_FUEL_MAX}</span>
+                <span style={{ fontSize: 10, opacity: 0.4 }}>
+                  0/{FIRE_FUEL_MAX}
+                </span>
               )}
               <EmptySlotHint
                 hint={SLOT_HINTS.fuel}
                 empty={fp.slots.fuelWood < 1}
               />
-            </button>
+            </FireplaceSlot>
           </div>
 
           <div className="fp-slot food">
@@ -337,23 +359,18 @@ export function FireplaceScreen({
                 !save.activity;
               return (
                 <div key={i} className={i > 0 ? "fp-food-extra" : undefined}>
-                  <button
-                    type="button"
-                    className={`fp-slot-box${dragOver === `food-${i}` ? " over" : ""}`}
+                  <FireplaceSlot
+                    id={`fp-food-${i}`}
+                    target={{ kind: "food", slotIndex: i }}
+                    className="fp-slot-box"
                     title={food ? undefined : SLOT_HINTS.food}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setDragOver(`food-${i}`);
-                    }}
-                    onDragLeave={() => setDragOver(null)}
-                    onDrop={(e) =>
-                      onDropTarget(e, { kind: "food", slotIndex: i })
-                    }
-                    onClick={() => take({ kind: "food", slotIndex: i })}
+                    acceptDrop={acceptDrop}
+                    onPlace={onPlace}
+                    onTake={() => take({ kind: "food", slotIndex: i })}
                   >
                     <SlotArt slot={food} />
                     <EmptySlotHint hint={SLOT_HINTS.food} empty={!food} />
-                  </button>
+                  </FireplaceSlot>
                   {cookable && (
                     <button
                       type="button"
@@ -492,13 +509,22 @@ export function FireplaceScreen({
           const uses =
             slot.durability ??
             (isIgnition(slot.itemId) ? IGNITION_USES[slot.itemId] : undefined);
+          const payload: PointerDragPayload = {
+            kind: "inventory",
+            itemId: slot.itemId,
+            artSrc: itemArtSrc(slot.itemId),
+            inventoryIndex: i,
+          };
+          const bind = bindDraggable({
+            sourceKey: `fp-inv-${i}-${slot.itemId}`,
+            payload,
+          });
           return (
             <button
               key={`${slot.itemId}-${i}`}
               type="button"
-              className="slot"
-              draggable
-              onDragStart={(e) => onInvDragStart(e, i)}
+              {...bind}
+              className={`slot ${bind.className}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={itemArtSrc(slot.itemId)} alt={def.name} />

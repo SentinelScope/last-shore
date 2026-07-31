@@ -220,17 +220,19 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 
 /* hotspots stay out of the way until you touch the screen */
 .spot{position:absolute;width:52px;height:52px;border:0;background:none;display:grid;place-items:center;cursor:pointer;
-  opacity:0;pointer-events:none;transition:opacity .5s ease;z-index:2}
+  opacity:0;pointer-events:none;transition:opacity .5s ease;z-index:2;
+  transform:translate(-50%,-50%)}
 .hud.reveal .spot{opacity:1;pointer-events:auto}
 .spot::after{content:"";width:9px;height:9px;border-radius:50%;border:1px solid rgba(255,255,255,.85);
   background:rgba(255,255,255,.18);box-shadow:0 0 8px rgba(0,0,0,.35);animation:pulse 4.5s ease-in-out infinite}
 @keyframes pulse{0%,100%{transform:scale(1);opacity:.5}50%{transform:scale(1.5);opacity:1}}
 .spot:focus-visible{outline:1px solid #fff;outline-offset:2px;border-radius:50%}
+/* tops: under the SVG object, mapped through world-host (phone minus dock) */
 .s-horizon{left:66%;top:33%}
 .s-shore{left:52%;top:56%}
-.s-fire{left:30%;top:79%}
-.s-water{left:8%;top:90%}
-.s-hut{left:76%;top:71%}
+.s-fire{left:34.4%;top:calc((100% - var(--dock-clearance)) * 735 / 844)}
+.s-water{left:17.4%;top:calc((100% - var(--dock-clearance)) * 760 / 844)}
+.s-hut{left:79%;top:calc((100% - var(--dock-clearance)) * 680 / 844)}
 .s-palm{left:12%;top:52%}
 
 .caption{position:absolute;left:20px;right:20px;bottom:calc(112px + env(safe-area-inset-bottom));background:rgba(14,18,24,.62);
@@ -427,7 +429,9 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .world.has-water.w-storm #watercatch .catchdrip{opacity:1}
 
 .water-drop{
-  position:absolute;z-index:5;left:8%;top:90%;width:56px;height:56px;
+  position:absolute;z-index:5;left:17.4%;
+  top:calc((100% - var(--dock-clearance)) * 760 / 844);
+  width:56px;height:56px;
   transform:translate(-50%,-50%);pointer-events:none;border-radius:50%;
   touch-action:none
 }
@@ -705,6 +709,11 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
   /* Closed sheets must not keep backdrop-filter — it paints a black veil at opacity:0 */
   opacity:0;visibility:hidden;pointer-events:none;transition:opacity .4s,visibility .4s}
 .sheet.on{opacity:1;visibility:visible;pointer-events:auto;backdrop-filter:blur(7px)}
+.sheet:has(.you-panel){
+  justify-content:flex-start;
+  padding-top:calc(16px + env(safe-area-inset-top, 0px));
+  padding-bottom:calc(16px + env(safe-area-inset-bottom, 0px));
+}
 .scrollwrap{display:flex;flex-direction:column;max-height:100%;filter:drop-shadow(0 22px 44px rgba(0,0,0,.55))}
 .rod{height:13px;flex:none;border-radius:7px;margin:0 -8px;
   background:linear-gradient(#A5825A,#7A5D3C 45%,#513C25);
@@ -802,10 +811,12 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 
 /* ---------- you page ---------- */
 .you-panel{
-  display:flex;flex-direction:column;max-height:100%;width:100%;
+  display:flex;flex-direction:column;width:100%;
+  max-height:calc(100% - 52px);
   background:linear-gradient(180deg,#1a1612,#0e0c0a);color:#EDE7DD;
   border:1px solid rgba(237,231,221,.12);border-radius:4px;
-  filter:drop-shadow(0 22px 44px rgba(0,0,0,.55));overflow:hidden
+  filter:drop-shadow(0 22px 44px rgba(0,0,0,.55));
+  overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch
 }
 .you-head{padding:18px 18px 10px;flex:none;border-bottom:1px solid rgba(237,231,221,.08)}
 .you-head h1{font-family:var(--font-display),Georgia,serif;font-weight:400;font-size:20px}
@@ -860,7 +871,7 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 /* Dark ink only when the pale fill covers most of the track */
 .you-bar.c[data-filled] .you-bar-label,
 .you-bar.c[data-filled] .you-bar-pct{color:#2A241C;text-shadow:none}
-.you-ledger{flex:1;overflow-y:auto;padding:8px 16px 18px}
+.you-ledger{flex:none;overflow:visible;padding:8px 16px 22px}
 .you-sec{margin-top:14px}
 .you-sec header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px;
   border-bottom:1px solid rgba(237,231,221,.12);padding-bottom:4px}

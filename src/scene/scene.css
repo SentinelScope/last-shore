@@ -140,9 +140,10 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .palmB .trunk{transform-origin:110px 664px;animation-delay:-2s}
 .w-storm .trunk{animation-duration:3.2s}
 
-.flame{transform-box:view-box;transform-origin:134px 706px;animation:flick 1.4s ease-in-out infinite}
-.flame-in{transform-box:view-box;transform-origin:134px 704px;animation:flick .9s ease-in-out infinite reverse}
-.firelight{animation:breathe 2.6s ease-in-out infinite;transform-box:view-box;transform-origin:134px 704px}
+.flame{transform-box:fill-box;transform-origin:center bottom;animation:flick 1.4s ease-in-out infinite}
+.flame-in{transform-box:fill-box;transform-origin:center bottom;animation:flick .9s ease-in-out infinite reverse}
+.firelight{animation:breathe 2.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.fireplace-struct,.storage-struct{transition:opacity .3s ease}
 .fireshadow{animation:breathe 3.1s ease-in-out infinite;transform-box:view-box;transform-origin:196px 650px}
 .cloudbank{animation:drift 90s ease-in-out infinite alternate}
 .cloudbank.slow{animation-duration:140s;animation-direction:alternate-reverse}
@@ -231,7 +232,8 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .s-horizon{left:66%;top:33%}
 .s-shore{left:52%;top:56%}
 .s-fire{left:34.4%;top:calc((100% - var(--dock-clearance)) * 735 / 844)}
-.s-water{left:17.4%;top:calc((100% - var(--dock-clearance)) * 760 / 844)}
+.s-water{left:17.9%;top:calc((100% - var(--dock-clearance)) * 778 / 844)}
+.s-storage{left:60.5%;top:calc((100% - var(--dock-clearance)) * 762 / 844)}
 .s-hut{left:79%;top:calc((100% - var(--dock-clearance)) * 680 / 844)}
 .s-palm{left:12%;top:52%}
 
@@ -407,7 +409,8 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 }
 
 /* fireplace: hidden until Simple Fireplace is crafted */
-.world:not(.has-fireplace) .firepit{opacity:0;pointer-events:none}
+.world:not(.has-fireplace) .firepit,
+.world:not(.has-fireplace) .fire-fx{opacity:0;pointer-events:none}
 .world:not(.has-fireplace) .firelight{opacity:0!important;animation:none!important}
 /* flames only while lit — pit stones/wood still show when built */
 .world:not(.fire-lit) .fire-live,
@@ -417,20 +420,17 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 /* lean-to shelter hidden until crafted */
 .world:not(.has-shelter) .shelter{opacity:0;pointer-events:none}
 
-/* water cup hidden until a container is placed */
-.world:not(.has-water) #watercatch > path,
-.world:not(.has-water) #watercatch > clipPath,
-.world:not(.has-water) #cupfill,
-.world:not(.has-water) #cupfilltop,
-.world:not(.has-water) #watercatch > ellipse:nth-of-type(n+2),
-.world:not(.has-water) #watercatch > g:not(.catchdrip){opacity:0}
+/* water vessel + fill hidden until a container is placed; plinth always shows */
+.world:not(.has-water) #water-vessel,
+.world:not(.has-water) #water-fill{opacity:0!important}
 .world:not(.has-water) #watercatch .catchdrip{opacity:0!important}
 .world.has-water.w-rain #watercatch .catchdrip,
 .world.has-water.w-storm #watercatch .catchdrip{opacity:1}
+#water-vessel-mask{mask-type:alpha}
 
 .water-drop{
-  position:absolute;z-index:5;left:17.4%;
-  top:calc((100% - var(--dock-clearance)) * 760 / 844);
+  position:absolute;z-index:5;left:17.9%;
+  top:calc((100% - var(--dock-clearance)) * 778 / 844);
   width:56px;height:56px;
   transform:translate(-50%,-50%);pointer-events:none;border-radius:50%;
   touch-action:none
@@ -497,26 +497,25 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
   display:flex;align-items:center;justify-content:center
 }
 .fireplace-closeup{
-  width:min(78%,280px);aspect-ratio:1;position:relative;
+  width:min(92%,700px);aspect-ratio:1;position:relative;
   touch-action:none;user-select:none
 }
-.fireplace-closeup svg{width:100%;height:100%;display:block;overflow:visible}
+.fireplace-closeup .fp-art{width:100%;height:100%;display:block;overflow:visible}
+.fp-flame{transform-box:fill-box;transform-origin:center bottom;animation:flick 1.4s ease-in-out infinite}
+.fp-flame-in{transform-box:fill-box;transform-origin:center bottom;animation:flick .9s ease-in-out infinite reverse}
+.fp-firelight{animation:breathe 2.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
 .fp-hold-ring{
-  position:absolute;inset:8%;pointer-events:none;
-  border-radius:50%
+  position:absolute;width:120px;height:120px;pointer-events:none;
+  border-radius:50%;z-index:2
 }
 .fp-hold-ring svg{width:100%;height:100%}
 .fp-slots{
-  position:absolute;inset:0;pointer-events:none
+  position:absolute;inset:0;pointer-events:none;z-index:3
 }
 .fp-slot{
   position:absolute;width:72px;pointer-events:auto;
   display:flex;flex-direction:column;align-items:center;gap:4px
 }
-.fp-slot.ignition{left:4%;top:12%}
-.fp-slot.tinder{right:4%;top:12%}
-.fp-slot.fuel{left:4%;bottom:18%}
-.fp-slot.food{right:4%;bottom:14%}
 .fp-slot-label{
   font-size:10px;letter-spacing:.08em;text-transform:uppercase;
   opacity:.55
@@ -822,35 +821,47 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .you-head h1{font-family:var(--font-display),Georgia,serif;font-weight:400;font-size:20px}
 .you-head .cap{margin-top:4px;font-size:9px;letter-spacing:.18em;text-transform:uppercase;opacity:.5}
 .you-figure-wrap{
-  position:relative;flex:none;width:320px;max-width:100%;height:320px;margin:12px auto 8px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  grid-template-rows:auto auto;
+  align-items:center;
+  column-gap:14px;row-gap:6px;
+  flex:none;width:min(100%,360px);margin:12px auto 8px;padding:0 12px;
 }
 .you-figure{
-  display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;user-select:none;
+  grid-column:1;grid-row:1;
+  display:block;width:100%;height:320px;max-height:42vh;object-fit:contain;
+  pointer-events:none;user-select:none;
+}
+.you-slots{
+  grid-column:2;grid-row:1;
+  display:flex;flex-direction:column;gap:10px;
+  align-items:stretch;justify-content:center;
 }
 .you-wear{
-  width:88%;height:88%;object-fit:contain;pointer-events:none;
-  filter:drop-shadow(0 1px 1px rgba(0,0,0,.35));
+  width:30px;height:30px;object-fit:contain;pointer-events:none;
 }
-.you-wear-head{width:78%;height:78%}
-.you-wear-body{width:92%;height:92%}
-.you-wear-legs{width:86%;height:86%}
-.you-wear-feet{width:82%;height:78%}
 .you-slot{
-  position:absolute;width:52px;height:52px;margin:0;padding:0;z-index:2;
-  transform:translate(-50%,-50%);border:1px dashed rgba(237,231,221,.28);
-  background:rgba(14,18,24,.22);border-radius:4px;cursor:default;
-  display:grid;place-items:center
+  position:relative;width:56px;height:56px;margin:0;padding:4px 4px 2px;z-index:2;
+  border:1px dashed rgba(237,231,221,.28);
+  background:rgba(14,18,24,.28);border-radius:4px;cursor:default;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px
 }
-.you-slot.filled{border-style:solid;border-color:rgba(237,231,221,.35);cursor:pointer;background:rgba(14,18,24,.18)}
+.you-slot.filled{border-style:solid;border-color:rgba(237,231,221,.4);cursor:pointer;background:rgba(14,18,24,.4)}
 .you-slot.filled:hover{border-color:rgba(237,231,221,.7)}
 .you-slot img{pointer-events:none;opacity:.95}
+.you-slot-label{
+  font-size:8px;letter-spacing:.12em;text-transform:uppercase;
+  opacity:.55;line-height:1
+}
 .you-slot-empty{
-  display:block;width:18px;height:18px;border:1px solid rgba(237,231,221,.22);
+  display:block;width:16px;height:16px;border:1px solid rgba(237,231,221,.22);
   border-radius:2px;opacity:.55
 }
 .you-worn-line{
-  position:absolute;left:0;right:0;bottom:2px;text-align:center;
-  font-size:11px;letter-spacing:.04em;opacity:.7;margin:0;z-index:2
+  grid-column:1 / -1;grid-row:2;
+  position:static;text-align:center;
+  font-size:11px;letter-spacing:.04em;opacity:.7;margin:4px 0 0
 }
 .you-bars{padding:14px 16px 8px;display:flex;flex-direction:column;gap:10px;flex:none}
 .you-bar{display:flex;align-items:center;gap:10px}

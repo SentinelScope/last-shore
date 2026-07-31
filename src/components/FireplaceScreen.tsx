@@ -17,6 +17,10 @@ import {
   startCook,
   takeFromFireplace,
 } from "@/game/fire";
+import {
+  isFireplaceBuiltTier,
+  type FireplaceBuiltTier,
+} from "@/game/fireplaceArt";
 import { ITEMS, itemArtSrc } from "@/game/items";
 import type { InventorySlot, SaveState } from "@/game/persist";
 import {
@@ -24,6 +28,11 @@ import {
   usePointerDrag,
   type PointerDragPayload,
 } from "./pointerDrag";
+import {
+  FireplaceCloseupArt,
+  fireplaceAshCss,
+  PAGE_FIRE_SIZE as FP_ART_SIZE,
+} from "./FireplaceCloseupArt";
 
 const SLOT_HINTS = {
   ignition: "Flint, Wooden Matches, Lighter",
@@ -31,6 +40,11 @@ const SLOT_HINTS = {
   fuel: "Wood",
   food: "Fish, Crab, Can of Food, or a Cooking Pan",
 } as const;
+
+function tierOf(save: SaveState): FireplaceBuiltTier {
+  const built = save.fireplace.built;
+  return isFireplaceBuiltTier(built) ? built : "simple";
+}
 
 type DropKind =
   | { kind: "ignition" }
@@ -174,12 +188,34 @@ export function FireplaceScreen({
   const fp = save.fireplace;
   const lit = fp.lit;
   const ready = canLight(save);
+  const tier = tierOf(save);
   const pan = hasPanInFood(fp.slots.food);
   const foodSlots = pan
     ? fp.slots.food.length < 2
       ? [...fp.slots.food, null]
       : fp.slots.food
     : fp.slots.food.slice(0, 1);
+
+  const ashCss = fireplaceAshCss(tier);
+  const [displayTier, setDisplayTier] = useState(tier);
+  const [fadeTier, setFadeTier] = useState<FireplaceBuiltTier | null>(null);
+  const [fadeOn, setFadeOn] = useState(false);
+
+  useEffect(() => {
+    if (!open || tier === displayTier) return;
+    setFadeTier(tier);
+    setFadeOn(false);
+    const kick = requestAnimationFrame(() => setFadeOn(true));
+    const done = window.setTimeout(() => {
+      setDisplayTier(tier);
+      setFadeTier(null);
+      setFadeOn(false);
+    }, 300);
+    return () => {
+      cancelAnimationFrame(kick);
+      window.clearTimeout(done);
+    };
+  }, [tier, open, displayTier]);
 
   const cancelHold = useCallback(() => {
     holding.current = false;
@@ -285,115 +321,6 @@ export function FireplaceScreen({
       </div>
 
       <div className="fireplace-stage">
-        <div className="fp-slots">
-          <div className="fp-slot ignition">
-            <span className="fp-slot-label">Ignition</span>
-            <FireplaceSlot
-              id="fp-ignition"
-              target={{ kind: "ignition" }}
-              className="fp-slot-box"
-              title={fp.slots.ignition ? undefined : SLOT_HINTS.ignition}
-              acceptDrop={acceptDrop}
-              onPlace={onPlace}
-              onTake={() => take({ kind: "ignition" })}
-            >
-              <SlotArt slot={fp.slots.ignition} />
-              <EmptySlotHint
-                hint={SLOT_HINTS.ignition}
-                empty={!fp.slots.ignition}
-              />
-            </FireplaceSlot>
-          </div>
-
-          <div className="fp-slot tinder">
-            <span className="fp-slot-label">Tinder</span>
-            <FireplaceSlot
-              id="fp-tinder"
-              target={{ kind: "tinder" }}
-              className="fp-slot-box"
-              title={fp.slots.tinder ? undefined : SLOT_HINTS.tinder}
-              acceptDrop={acceptDrop}
-              onPlace={onPlace}
-              onTake={() => take({ kind: "tinder" })}
-            >
-              <SlotArt slot={fp.slots.tinder} />
-              <EmptySlotHint
-                hint={SLOT_HINTS.tinder}
-                empty={!fp.slots.tinder}
-              />
-            </FireplaceSlot>
-          </div>
-
-          <div className="fp-slot fuel">
-            <span className="fp-slot-label">Fuel</span>
-            <FireplaceSlot
-              id="fp-fuel"
-              target={{ kind: "fuel" }}
-              className="fp-slot-box"
-              title={fp.slots.fuelWood >= 1 ? undefined : SLOT_HINTS.fuel}
-              acceptDrop={acceptDrop}
-              onPlace={onPlace}
-              onTake={() => take({ kind: "fuel", qty: 1 })}
-            >
-              <SlotArt slot={null} woodCount={fp.slots.fuelWood} />
-              {fp.slots.fuelWood < 1 && (
-                <span style={{ fontSize: 10, opacity: 0.4 }}>
-                  0/{FIRE_FUEL_MAX}
-                </span>
-              )}
-              <EmptySlotHint
-                hint={SLOT_HINTS.fuel}
-                empty={fp.slots.fuelWood < 1}
-              />
-            </FireplaceSlot>
-          </div>
-
-          <div className="fp-slot food">
-            <span className="fp-slot-label">Food</span>
-            {foodSlots.map((food, i) => {
-              const cookable =
-                lit &&
-                food &&
-                isCookable(food.itemId) &&
-                food.itemId !== "cooking_pan" &&
-                !save.activity;
-              return (
-                <div key={i} className={i > 0 ? "fp-food-extra" : undefined}>
-                  <FireplaceSlot
-                    id={`fp-food-${i}`}
-                    target={{ kind: "food", slotIndex: i }}
-                    className="fp-slot-box"
-                    title={food ? undefined : SLOT_HINTS.food}
-                    acceptDrop={acceptDrop}
-                    onPlace={onPlace}
-                    onTake={() => take({ kind: "food", slotIndex: i })}
-                  >
-                    <SlotArt slot={food} />
-                    <EmptySlotHint hint={SLOT_HINTS.food} empty={!food} />
-                  </FireplaceSlot>
-                  {cookable && (
-                    <button
-                      type="button"
-                      className="fp-cook"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        cookAt(i);
-                      }}
-                    >
-                      Cook
-                    </button>
-                  )}
-                  {cooking?.cookSlotIndex === i && (
-                    <span className="fp-slot-label" style={{ opacity: 0.8 }}>
-                      {formatRemaining(cooking.endsAt, now)}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
         <div
           className="fireplace-closeup"
           onPointerDown={onHoldStart}
@@ -403,6 +330,7 @@ export function FireplaceScreen({
           onContextMenu={(e) => e.preventDefault()}
           style={{
             cursor: ready && !lit ? "pointer" : "default",
+            width: `min(92%, ${Math.round(FP_ART_SIZE)}px)`,
           }}
         >
           {(holdProgress > 0 || (ready && !lit)) && (
@@ -410,7 +338,9 @@ export function FireplaceScreen({
               className="fp-hold-ring"
               aria-hidden
               style={{
-                transform: `scale(${1 - holdProgress * 0.22})`,
+                left: ashCss.left,
+                top: ashCss.top,
+                transform: `translate(-50%, -50%) scale(${1 - holdProgress * 0.22})`,
                 opacity: 0.45 + holdProgress * 0.55,
               }}
             >
@@ -444,53 +374,154 @@ export function FireplaceScreen({
             </div>
           )}
 
-          <svg viewBox="0 0 200 200" aria-hidden>
-            <defs>
-              <radialGradient id="fp-glow" cx=".5" cy=".55" r=".5">
-                <stop
-                  offset="0"
-                  stopColor="#FFAF54"
-                  stopOpacity={lit ? 0.7 : flameGlow * 0.55}
-                />
-                <stop offset="1" stopColor="#E4763F" stopOpacity="0" />
-              </radialGradient>
-            </defs>
-            <ellipse
-              cx="100"
-              cy="118"
-              rx="88"
-              ry="42"
-              fill="url(#fp-glow)"
-              opacity={lit ? 1 : 0.35 + holdProgress * 0.65}
-            />
-            <ellipse cx="100" cy="148" rx="42" ry="12" fill="#3A322C" opacity=".7" />
-            <g fill="#6B5A4A">
-              <polygon points="68,142 78,134 90,142 80,150" />
-              <polygon points="110,140 122,132 134,142 120,150" />
-              <polygon points="88,154 100,148 114,156 100,162" />
-            </g>
-            <g fill="#4A3828">
-              <polygon points="78,138 118,124 122,130 82,144" />
-              <polygon points="82,128 120,142 116,148 78,134" />
-            </g>
-            <g
+          <FireplaceCloseupArt
+            tier={tier}
+            displayTier={displayTier}
+            fadeTier={fadeTier}
+            fadeOn={fadeOn}
+            lit={lit}
+            holdProgress={holdProgress}
+            flameScale={flameScale}
+            flameGlow={flameGlow}
+            holding={!!holding.current}
+          />
+
+          <div className="fp-slots">
+            <div
+              className="fp-slot ignition"
               style={{
-                transformOrigin: "100px 132px",
-                transform: `scale(${lit ? 1.05 : flameScale})`,
-                opacity: lit ? 1 : 0.15 + holdProgress * 0.85,
-                transition: holding.current ? "none" : "opacity .2s, transform .2s",
+                left: ashCss.left,
+                top: ashCss.top,
+                transform: "translate(calc(-50% - 96px), calc(-50% - 120px))",
               }}
             >
-              <path
-                d="M100 132c-14-9-17-24-8-38 2 9 6 15 12 18 4-14 3-26-6-36 20 9 32 26 32 42 0 12-9 20-21 23z"
-                fill="#E4763F"
-              />
-              <path
-                d="M102 128c-8-6-9-16-4-24 1 6 4 10 9 12 2-8 0-15-3-21 12 7 18 16 18 26 0 8-6 12-13 14z"
-                fill="#FFC578"
-              />
-            </g>
-          </svg>
+              <span className="fp-slot-label">Ignition</span>
+              <FireplaceSlot
+                id="fp-ignition"
+                target={{ kind: "ignition" }}
+                className="fp-slot-box"
+                title={fp.slots.ignition ? undefined : SLOT_HINTS.ignition}
+                acceptDrop={acceptDrop}
+                onPlace={onPlace}
+                onTake={() => take({ kind: "ignition" })}
+              >
+                <SlotArt slot={fp.slots.ignition} />
+                <EmptySlotHint
+                  hint={SLOT_HINTS.ignition}
+                  empty={!fp.slots.ignition}
+                />
+              </FireplaceSlot>
+            </div>
+
+            <div
+              className="fp-slot tinder"
+              style={{
+                left: ashCss.left,
+                top: ashCss.top,
+                transform: "translate(calc(-50% + 96px), calc(-50% - 120px))",
+              }}
+            >
+              <span className="fp-slot-label">Tinder</span>
+              <FireplaceSlot
+                id="fp-tinder"
+                target={{ kind: "tinder" }}
+                className="fp-slot-box"
+                title={fp.slots.tinder ? undefined : SLOT_HINTS.tinder}
+                acceptDrop={acceptDrop}
+                onPlace={onPlace}
+                onTake={() => take({ kind: "tinder" })}
+              >
+                <SlotArt slot={fp.slots.tinder} />
+                <EmptySlotHint
+                  hint={SLOT_HINTS.tinder}
+                  empty={!fp.slots.tinder}
+                />
+              </FireplaceSlot>
+            </div>
+
+            <div
+              className="fp-slot fuel"
+              style={{
+                left: ashCss.left,
+                top: ashCss.top,
+                transform: "translate(calc(-50% - 96px), calc(-50% + 100px))",
+              }}
+            >
+              <span className="fp-slot-label">Fuel</span>
+              <FireplaceSlot
+                id="fp-fuel"
+                target={{ kind: "fuel" }}
+                className="fp-slot-box"
+                title={fp.slots.fuelWood >= 1 ? undefined : SLOT_HINTS.fuel}
+                acceptDrop={acceptDrop}
+                onPlace={onPlace}
+                onTake={() => take({ kind: "fuel", qty: 1 })}
+              >
+                <SlotArt slot={null} woodCount={fp.slots.fuelWood} />
+                {fp.slots.fuelWood < 1 && (
+                  <span style={{ fontSize: 10, opacity: 0.4 }}>
+                    0/{FIRE_FUEL_MAX}
+                  </span>
+                )}
+                <EmptySlotHint
+                  hint={SLOT_HINTS.fuel}
+                  empty={fp.slots.fuelWood < 1}
+                />
+              </FireplaceSlot>
+            </div>
+
+            <div
+              className="fp-slot food"
+              style={{
+                left: ashCss.left,
+                top: ashCss.top,
+                transform: "translate(calc(-50% + 96px), calc(-50% + 100px))",
+              }}
+            >
+              <span className="fp-slot-label">Food</span>
+              {foodSlots.map((food, i) => {
+                const cookable =
+                  lit &&
+                  food &&
+                  isCookable(food.itemId) &&
+                  food.itemId !== "cooking_pan" &&
+                  !save.activity;
+                return (
+                  <div key={i} className={i > 0 ? "fp-food-extra" : undefined}>
+                    <FireplaceSlot
+                      id={`fp-food-${i}`}
+                      target={{ kind: "food", slotIndex: i }}
+                      className="fp-slot-box"
+                      title={food ? undefined : SLOT_HINTS.food}
+                      acceptDrop={acceptDrop}
+                      onPlace={onPlace}
+                      onTake={() => take({ kind: "food", slotIndex: i })}
+                    >
+                      <SlotArt slot={food} />
+                      <EmptySlotHint hint={SLOT_HINTS.food} empty={!food} />
+                    </FireplaceSlot>
+                    {cookable && (
+                      <button
+                        type="button"
+                        className="fp-cook"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          cookAt(i);
+                        }}
+                      >
+                        Cook
+                      </button>
+                    )}
+                    {cooking?.cookSlotIndex === i && (
+                      <span className="fp-slot-label" style={{ opacity: 0.8 }}>
+                        {formatRemaining(cooking.endsAt, now)}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 

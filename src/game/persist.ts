@@ -73,7 +73,7 @@ export type FireplaceSlots = {
 };
 
 export type FireplaceState = {
-  built: "none" | "simple";
+  built: "none" | "simple" | "stone" | "cooking";
   lit: boolean;
   /** Last wall-clock sync for fuel burn / storm check. */
   syncedAt: number;
@@ -99,7 +99,7 @@ export type SaveState = {
   pendingOverflow: PendingOverflow | null;
   collectedTickIndex: number | null;
   /** @deprecated use fireplace.built — kept during migrate */
-  fireplaceBuilt?: "none" | "simple";
+  fireplaceBuilt?: "none" | "simple" | "stone" | "cooking";
   fireplace: FireplaceState;
   waterSpot: WaterSpot;
   shelterTier: ShelterTierId;

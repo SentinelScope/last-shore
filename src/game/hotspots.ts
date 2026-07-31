@@ -3,7 +3,8 @@ export type HotspotId =
   | "palm"
   | "water"
   | "fire"
-  | "hut";
+  | "hut"
+  | "storage";
 
 export type HotspotDef = {
   id: HotspotId;
@@ -48,5 +49,12 @@ export const HOTSPOTS: HotspotDef[] = [
     title: "Water collection",
     description: "Set a cup out and wait for rain. It never evaporates.",
     action: "Look",
+  },
+  {
+    id: "storage",
+    className: "s-storage",
+    title: "Storage",
+    description: "Where your supplies live.",
+    action: "Open",
   },
 ];

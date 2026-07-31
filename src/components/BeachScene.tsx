@@ -21,6 +21,7 @@ import {
   HOTSPOT_ACTIVITY,
   HOTSPOT_IDLE_MS,
   WEATHER_LABEL,
+  storageSlotCount,
   type ActivityKind,
   type DurationId,
   type RecipeId,
@@ -39,6 +40,11 @@ import {
   type SaveState,
 } from "@/game/persist";
 import { poseFor } from "@/game/pose";
+import { STORAGE_TIER_NAME } from "@/game/storageArt";
+import {
+  isWaterVesselId,
+  waterSpotCaption,
+} from "@/game/waterArt";
 import { dayNumber, dayPartAt } from "@/game/time";
 import {
   catchUp,
@@ -139,8 +145,14 @@ function deriveSceneProps(save: SaveState, now: number): WorldSceneProps {
     pose,
     fireLit: save.fireplace.lit,
     hasFireplace: save.fireplace.built !== "none",
+    fireplaceTier:
+      save.fireplace.built === "stone" || save.fireplace.built === "cooking"
+        ? save.fireplace.built
+        : "simple",
+    storageTier: save.storageTier,
     hasShelter: save.shelterTier !== "none",
     hasWater,
+    waterItemId: save.waterSpot.itemId,
     waterLevel,
     figureVisible: !save.activity,
   };
@@ -153,8 +165,11 @@ function scenePropsEqual(a: WorldSceneProps, b: WorldSceneProps): boolean {
     a.pose === b.pose &&
     a.fireLit === b.fireLit &&
     a.hasFireplace === b.hasFireplace &&
+    a.fireplaceTier === b.fireplaceTier &&
+    a.storageTier === b.storageTier &&
     a.hasShelter === b.hasShelter &&
     a.hasWater === b.hasWater &&
+    a.waterItemId === b.waterItemId &&
     a.waterLevel === b.waterLevel &&
     a.figureVisible === b.figureVisible
   );
@@ -398,7 +413,21 @@ export function BeachScene() {
       return;
     }
 
+    if (id === "storage") {
+      if (openSpot === "storage") {
+        openItemsFromSpot();
+        return;
+      }
+      setOpenSpot("storage");
+      return;
+    }
+
     if (id === "water" && save.waterSpot.itemId) {
+      const fill = currentWaterFill(save, now);
+      if (openSpot === "water" && fill > 0) {
+        commitSave(drinkFromWater(save, Date.now()));
+        return;
+      }
       setOpenSpot((cur) => (cur === id ? null : id));
       return;
     }
@@ -410,6 +439,11 @@ export function BeachScene() {
     e.stopPropagation();
     reveal();
     if (!openSpot || !save) return;
+
+    if (openSpot === "storage") {
+      openItemsFromSpot();
+      return;
+    }
 
     if (openSpot === "fire" && save.fireplace.built === "none") {
       setCraftOpen(true);
@@ -556,8 +590,7 @@ export function BeachScene() {
     commitSave(next);
   }
 
-  function openItems(e: React.MouseEvent) {
-    e.stopPropagation();
+  function openItemsFromSpot() {
     playSfx("items");
     setItemsOpen(true);
     setCraftOpen(false);
@@ -570,6 +603,11 @@ export function BeachScene() {
     setContainerOpen(false);
     setRevealed(false);
     if (idleRef.current) window.clearTimeout(idleRef.current);
+  }
+
+  function openItems(e: React.MouseEvent) {
+    e.stopPropagation();
+    openItemsFromSpot();
   }
 
   function openCraft(e: React.MouseEvent) {
@@ -718,7 +756,16 @@ export function BeachScene() {
       captionAction = "Build";
     }
   } else if (live && save && openHotspot?.id === "water") {
-    if (save.waterSpot.itemId) {
+    if (save.waterSpot.itemId && isWaterVesselId(save.waterSpot.itemId)) {
+      const fill = currentWaterFill(save, now);
+      captionTitle = waterSpotCaption(save.waterSpot.itemId, fill);
+      captionBody =
+        fill > 0
+          ? "Tap again to drink. Remainder stays in the vessel."
+          : "Empty. Rain fills it slowly; a storm fills it fast.";
+      captionAction = fill > 0 ? "Drink" : null;
+      showAction = !!captionAction;
+    } else if (save.waterSpot.itemId) {
       const def = ITEMS[save.waterSpot.itemId];
       const fill = currentWaterFill(save, now);
       captionTitle = def?.name ?? "Water";
@@ -731,6 +778,14 @@ export function BeachScene() {
       showAction = false;
       captionAction = null;
     }
+  } else if (live && save && openHotspot?.id === "storage") {
+    const slots = storageSlotCount(save.storageTier);
+    const used = save.inventory.length;
+    const name = STORAGE_TIER_NAME[save.storageTier];
+    captionTitle = `${name} — ${used} of ${slots} slots`;
+    captionBody = "Tap again to open your items.";
+    captionAction = "Open";
+    showAction = true;
   } else if (live && save && openHotspot && busy && save.activity) {
     captionTitle = openHotspot.title;
     captionBody = `You're already ${ACTIVITY_LABEL[save.activity.kind].toLowerCase()}.`;

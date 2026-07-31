@@ -70,14 +70,6 @@ const BAR_META = [
   },
 ];
 
-/** Percent of the paper-doll wrap — anchored to body regions on character_front.png. */
-const SLOT_POS: Record<ClothingSlotId, { left: string; top: string }> = {
-  head: { left: "50%", top: "18%" },
-  body: { left: "50%", top: "38%" },
-  legs: { left: "50%", top: "58%" },
-  feet: { left: "50%", top: "78%" },
-};
-
 function YouFigure({
   save,
   onUnequip,
@@ -104,37 +96,38 @@ function YouFigure({
         height={1024}
       />
 
-      {CLOTHING_SLOTS.map((slot) => {
-        const itemId = worn[slot];
-        const pos = SLOT_POS[slot];
-        const def = itemId ? ITEMS[itemId] : null;
-        return (
-          <button
-            key={slot}
-            type="button"
-            className={`you-slot you-slot-${slot}${itemId ? " filled" : ""}`}
-            style={pos}
-            title={def ? `Remove ${def.name}` : `${slot} — empty`}
-            aria-label={def ? `Unequip ${def.name}` : `Empty ${slot} slot`}
-            disabled={!itemId}
-            onClick={() => {
-              if (!itemId || !onUnequip) return;
-              onUnequip(slot);
-            }}
-          >
-            {itemId ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                className={`you-wear you-wear-${slot}`}
-                src={itemArtSrc(itemId)}
-                alt={def?.name ?? ""}
-              />
-            ) : (
-              <span className="you-slot-empty" aria-hidden />
-            )}
-          </button>
-        );
-      })}
+      <div className="you-slots" aria-label="Worn clothing">
+        {CLOTHING_SLOTS.map((slot) => {
+          const itemId = worn[slot];
+          const def = itemId ? ITEMS[itemId] : null;
+          return (
+            <button
+              key={slot}
+              type="button"
+              className={`you-slot you-slot-${slot}${itemId ? " filled" : ""}`}
+              title={def ? `Remove ${def.name}` : `${slot} — empty`}
+              aria-label={def ? `Unequip ${def.name}` : `Empty ${slot} slot`}
+              disabled={!itemId}
+              onClick={() => {
+                if (!itemId || !onUnequip) return;
+                onUnequip(slot);
+              }}
+            >
+              <span className="you-slot-label">{slot}</span>
+              {itemId ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  className={`you-wear you-wear-${slot}`}
+                  src={itemArtSrc(itemId)}
+                  alt={def?.name ?? ""}
+                />
+              ) : (
+                <span className="you-slot-empty" aria-hidden />
+              )}
+            </button>
+          );
+        })}
+      </div>
 
       <p className="you-worn-line">Worn: +{wornTotal}% comfort</p>
     </div>

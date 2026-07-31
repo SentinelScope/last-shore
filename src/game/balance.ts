@@ -57,7 +57,7 @@ export const WEATHER_BASE_WEIGHTS: Record<WeatherId, number> = {
   omen: 5,
 };
 
-export const SAVE_KEY = "last-shore-save-v1";
+export const SAVE_KEY = "last-shore-save-v2";
 
 export type StorageTierId = "sand" | "satchel" | "wooden" | "storage";
 

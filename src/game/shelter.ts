@@ -60,7 +60,7 @@ export function placeInShelter(
   while (decor.length < 3) decor.push(null);
 
   const displaced = decor[slotIndex];
-  let inventory = state.inventory.map((s) => ({ ...s }));
+  const inventory = state.inventory.map((s) => ({ ...s }));
 
   // Remove one from inventory
   const cur = inventory[inventoryIndex]!;

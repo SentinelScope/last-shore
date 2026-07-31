@@ -61,7 +61,7 @@ describe("ailments", () => {
   });
 
   it("catch-up can apply a forced outdoor roll path without crashing", () => {
-    let state = forceAilment(createNewRun(0), "cut_finger", 0);
+    const state = forceAilment(createNewRun(0), "cut_finger", 0);
     const { state: next, death } = catchUp(state, 60_000);
     expect(death).toBeNull();
     expect(next.ailments.some((a) => a.id === "cut_finger")).toBe(true);

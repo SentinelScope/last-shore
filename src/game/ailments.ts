@@ -18,12 +18,6 @@ import { dayNumber, tickIndexAt } from "./time";
 
 export type { ActiveAilment };
 
-const OUTDOOR: ReadonlySet<string> = new Set([
-  "scour",
-  "cut",
-  "fish",
-]);
-
 export function isOutdoorActivity(kind: ActivityKind | string): boolean {
   return kind !== "craft" && kind !== "cook";
 }
@@ -118,7 +112,6 @@ function impactDiaryText(
   id: Exclude<AilmentId, "lightning" | "freak_wave">,
   impact: { health?: number; thirst?: number },
 ): { text: string; deltas: { stat: "health" | "water"; amount: number }[] } {
-  const label = AILMENT_TABLE[id].label;
   const deltas: { stat: "health" | "water"; amount: number }[] = [];
   if (id === "cut_finger") {
     deltas.push({ stat: "health", amount: impact.health ?? -5 });
@@ -176,7 +169,7 @@ export function applyAilmentImpact(
   }
 
   const { text, deltas } = impactDiaryText(id, row.impact);
-  let next: SaveState = {
+  const next: SaveState = {
     ...state,
     ailments,
     health,
@@ -198,7 +191,7 @@ export function clearAilment(
   opts?: { silent?: boolean },
 ): SaveState {
   const ailments = (state.ailments ?? []).filter((a) => a.id !== id);
-  let next: SaveState = { ...state, ailments };
+  const next: SaveState = { ...state, ailments };
   if (opts?.silent) return next;
   return appendDiaryEntry(next, {
     dayNumber: dayNumber(state.runStartedAt, at),

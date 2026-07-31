@@ -251,7 +251,7 @@ function resolveCraft(state: SaveState, now: number): SaveState {
   }
 
   if (pendingOverflow && recipe.result) {
-    let next: SaveState = {
+    const next: SaveState = {
       ...state,
       activity: null,
       inventory,
@@ -288,7 +288,7 @@ function resolveCraft(state: SaveState, now: number): SaveState {
     pendingResults.kept = [];
   }
 
-  let next: SaveState = {
+  const next: SaveState = {
     ...state,
     activity: null,
     inventory,
@@ -326,7 +326,7 @@ function resolveCook(state: SaveState, now: number): SaveState {
   const resultId = COOK_RESULT[activity.cookItemId] ?? activity.cookItemId;
   foodSlots[slotIndex] = { itemId: resultId, qty: 1 };
 
-  let next: SaveState = {
+  const next: SaveState = {
     ...synced,
     activity: null,
     fireplace: {
@@ -363,7 +363,7 @@ export function resolveActivityIfDue(state: SaveState, now: number): SaveState {
   const loot = rollActivityLoot(activity, state.seed);
 
   if (!lootFits(state.inventory, state.storageTier, loot)) {
-    let next: SaveState = {
+    const next: SaveState = {
       ...state,
       activity: null,
       pendingOverflow: makeOverflow(
@@ -388,7 +388,7 @@ export function resolveActivityIfDue(state: SaveState, now: number): SaveState {
     loot,
   );
 
-  let next: SaveState = {
+  const next: SaveState = {
     ...state,
     activity: null,
     inventory,

@@ -347,7 +347,7 @@ export function maybeWriteWaterFullDiary(
     text = "Soft rain for hours. Full to the brim.";
   }
 
-  let next = appendDiaryEntry(state, {
+  const next = appendDiaryEntry(state, {
     dayNumber: dayNumber(state.runStartedAt, now),
     text,
     deltas: [{ stat: "water", amount: cap }],

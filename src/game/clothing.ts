@@ -99,7 +99,7 @@ export function wearClothing(
 
   const worn = { ...(state.worn ?? emptyWorn()) };
   const previous = worn[bodySlot];
-  let inventory = state.inventory.map((s) => ({ ...s }));
+  const inventory = state.inventory.map((s) => ({ ...s }));
 
   // Remove one from inventory (clothing stacks to 1).
   const cur = inventory[inventoryIndex]!;

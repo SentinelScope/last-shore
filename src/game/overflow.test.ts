@@ -19,12 +19,7 @@ describe("overflow fit", () => {
   });
 
   it("detects when new slots would exceed sand capacity", () => {
-    const inv = Array.from({ length: 8 }, (_, i) => ({
-      itemId: "stone",
-      qty: 1,
-      // unique stacks — stone stacks to 10 so merge would collapse; use wood+fiber mix
-    }));
-    // Actually stone stacks — fill 8 slots with different items
+    // Fill 8 slots with different items (stone stacks, so mix ids)
     const full = [
       { itemId: "stone", qty: 1 },
       { itemId: "wood", qty: 1 },

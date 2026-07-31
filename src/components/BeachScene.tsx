@@ -58,7 +58,7 @@ import { EndingScreen } from "./EndingScreen";
 import { FireplaceScreen } from "./FireplaceScreen";
 import { ItemsSheet } from "./ItemsSheet";
 import { ResultsPanel } from "./ResultsPanel";
-import { WorldScene, type WorldSceneProps } from "./WorldScene";
+import { WorldScene, DEFAULT_SCENE_PROPS, type WorldSceneProps } from "./WorldScene";
 import { YouSheet } from "./YouSheet";
 import "@/scene/scene.css";
 
@@ -184,6 +184,7 @@ export function BeachScene() {
     setEnding(death);
     saveRef.current = null;
     clearSave();
+    // Keep sceneProps — WorldScene must not unmount on death/tick.
   }
 
   useEffect(() => {
@@ -194,7 +195,6 @@ export function BeachScene() {
     if (death) {
       handleDeath(death);
       setSave(null);
-      setSceneProps(null);
     } else {
       commitSave(state, t);
     }
@@ -211,7 +211,6 @@ export function BeachScene() {
         queueMicrotask(() => handleDeath(died));
         saveRef.current = null;
         setSave(null);
-        setSceneProps(null);
         return;
       }
       saveRef.current = next;
@@ -307,42 +306,18 @@ export function BeachScene() {
     setRevealed(false);
   }
 
-  if (ending) {
-    return (
-      <div className="phone" ref={phoneRef}>
-        <WorldScene
-          dayPart="night"
-          weather="clear"
-          pose="hut"
-          fireLit={false}
-          hasFireplace={false}
-          hasShelter={false}
-          hasWater={false}
-          waterLevel={0}
-        />
-        <div className="vignette" />
-        <EndingScreen
-          days={ending.days}
-          line={ending.line}
-          bestDays={bestDays}
-          onNewRun={startNewRun}
-        />
-      </div>
-    );
-  }
-
-  if (!save || !view || !sceneProps) {
-    return <div className="phone" aria-busy="true" />;
-  }
-
-  const sub = `${DAY_PART_LABEL[view.dayPart]} · ${WEATHER_LABEL[view.weather]}`;
-  const busy = !!save.activity;
+  const live = !!save && !!view && !ending;
+  const sub = live
+    ? `${DAY_PART_LABEL[view.dayPart]} · ${WEATHER_LABEL[view.weather]}`
+    : "";
+  const busy = !!(save && save.activity);
   const spotActivity = openSpot
     ? (HOTSPOT_ACTIVITY[openSpot] ?? null)
     : null;
 
   function onPhonePointer() {
     if (
+      !live ||
       itemsOpen ||
       craftOpen ||
       diaryOpen ||
@@ -358,10 +333,11 @@ export function BeachScene() {
 
   function onSpotClick(id: HotspotId, e: React.MouseEvent) {
     e.stopPropagation();
+    if (!live || !save) return;
     reveal();
     setPickerKind(null);
 
-    if (id === "fire" && save?.fireplace.built !== "none") {
+    if (id === "fire" && save.fireplace.built !== "none") {
       setFireplaceOpen(true);
       setOpenSpot(null);
       setRevealed(false);
@@ -369,7 +345,7 @@ export function BeachScene() {
       return;
     }
 
-    if (id === "water" && save?.waterSpot.itemId) {
+    if (id === "water" && save.waterSpot.itemId) {
       setOpenSpot((cur) => (cur === id ? null : id));
       return;
     }
@@ -561,7 +537,7 @@ export function BeachScene() {
   let captionAction: string | null = openHotspot?.action ?? null;
   let showAction = true;
 
-  if (openHotspot?.id === "fire") {
+  if (live && save && openHotspot?.id === "fire") {
     if (save.fireplace.built !== "none") {
       captionTitle = "Fireplace";
       captionBody = save.fireplace.lit
@@ -574,7 +550,7 @@ export function BeachScene() {
         "A ring of stones waiting. Craft a Simple Fireplace to place it.";
       captionAction = "Build";
     }
-  } else if (openHotspot?.id === "water") {
+  } else if (live && save && openHotspot?.id === "water") {
     if (save.waterSpot.itemId) {
       const def = ITEMS[save.waterSpot.itemId];
       const fill = currentWaterFill(save, now);
@@ -588,7 +564,7 @@ export function BeachScene() {
       showAction = false;
       captionAction = null;
     }
-  } else if (openHotspot && busy && save.activity) {
+  } else if (live && save && openHotspot && busy && save.activity) {
     captionTitle = openHotspot.title;
     captionBody = `You're already ${ACTIVITY_LABEL[save.activity.kind].toLowerCase()}.`;
     if (save.activity.kind !== "craft" && save.activity.kind !== "cook") {
@@ -601,7 +577,7 @@ export function BeachScene() {
     }
     showAction = false;
     captionAction = null;
-  } else if (openHotspot && spotActivity) {
+  } else if (live && save && openHotspot && spotActivity) {
     const gate = canStartActivity(save, spotActivity);
     if (!gate.ok && !busy) {
       captionBody = gate.reason;
@@ -612,204 +588,231 @@ export function BeachScene() {
   }
 
   const pickerBlocked =
-    pickerKind && save && pickerKind !== "craft" && pickerKind !== "cook"
+    live &&
+    pickerKind &&
+    save &&
+    pickerKind !== "craft" &&
+    pickerKind !== "cook"
       ? (() => {
           const g = canStartActivity(save, pickerKind);
           return g.ok ? null : g.reason;
         })()
       : null;
 
+  // WorldScene is ALWAYS the first child of .phone — never behind an early
+  // return that swaps the tree. Tick state updates HUD siblings only.
+  const scene = sceneProps ?? DEFAULT_SCENE_PROPS;
+
   return (
-    <div className="phone" ref={phoneRef} onClick={onPhonePointer}>
-      <WorldScene {...sceneProps} />
+    <div
+      className="phone"
+      ref={phoneRef}
+      onClick={onPhonePointer}
+      aria-busy={!live && !ending ? true : undefined}
+    >
+      <WorldScene {...scene} />
 
       <GrainOverlay />
       <div className="vignette" />
 
-      {view.beach && (
-        <BeachCrate container={view.beach} onOpen={openContainer} />
+      {ending && (
+        <EndingScreen
+          days={ending.days}
+          line={ending.line}
+          bestDays={bestDays}
+          onNewRun={startNewRun}
+        />
       )}
 
-      <div
-        className={`water-drop${itemsOpen ? " active" : ""}`}
-        onDragOver={(e) => {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = "move";
-        }}
-        onDrop={onWaterDrop}
-      />
-
-      <div className={`hud${revealed ? " reveal" : ""}`}>
-        <div className="stamp">
-          <div className="day">Day {view.day}</div>
-          <div className="sub">{sub}</div>
-          {save.activity && (
-            <div className="activity-chip">
-              {activityChipLabel(save.activity, now)}
-            </div>
+      {live && save && view && (
+        <>
+          {view.beach && (
+            <BeachCrate container={view.beach} onOpen={openContainer} />
           )}
-        </div>
 
-        <div className="vitals">
-          <Vital label="W" value={save.thirst} kind="w" />
-          <Vital label="F" value={save.hunger} kind="f" />
-          <Vital label="H" value={save.health} kind="h" />
-          <Vital label="C" value={save.comfort} kind="c" />
-          <button
-            type="button"
-            className={`mute-tog${audioMuted ? " off" : ""}`}
-            aria-label={audioMuted ? "Unmute weather" : "Mute weather"}
-            aria-pressed={audioMuted}
-            onClick={(e) => {
-              e.stopPropagation();
-              const next = !audioMuted;
-              setAudioMuted(next);
-              setMuted(next);
+          <div
+            className={`water-drop${itemsOpen ? " active" : ""}`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
             }}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden>
-              {audioMuted ? (
-                <>
-                  <path d="M4 10v4h3l4 3V7L7 10H4z" />
-                  <path d="M16 9l5 5M21 9l-5 5" />
-                </>
-              ) : (
-                <>
-                  <path d="M4 10v4h3l4 3V7L7 10H4z" />
-                  <path d="M15 9.5a3.5 3.5 0 010 5" />
-                  <path d="M17.5 7a6 6 0 010 10" />
-                </>
-              )}
-            </svg>
-          </button>
-        </div>
-
-        {HOTSPOTS.map((h) => (
-          <button
-            key={h.id}
-            type="button"
-            className={`spot ${h.className}`}
-            aria-label={h.title}
-            onClick={(e) => onSpotClick(h.id, e)}
+            onDrop={onWaterDrop}
           />
-        ))}
 
-        <div
-          className={`caption${openHotspot && !pickerKind ? " on" : ""}`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <h2>{captionTitle}</h2>
-          <p>{captionBody}</p>
-          {showAction && captionAction ? (
-            <button type="button" className="act" onClick={onActionClick}>
-              {captionAction}
-            </button>
-          ) : null}
-        </div>
+          <div className={`hud${revealed ? " reveal" : ""}`}>
+            <div className="stamp">
+              <div className="day">Day {view.day}</div>
+              <div className="sub">{sub}</div>
+              {save.activity && (
+                <div className="activity-chip">
+                  {activityChipLabel(save.activity, now)}
+                </div>
+              )}
+            </div>
 
-        <DurationPicker
-          open={
-            !!pickerKind && pickerKind !== "craft" && pickerKind !== "cook"
-          }
-          kind={
-            pickerKind === "craft" || pickerKind === "cook" ? null : pickerKind
-          }
-          weather={view.weather}
-          blockedReason={pickerBlocked}
-          onPick={onPickDuration}
-          onClose={() => setPickerKind(null)}
-        />
+            <div className="vitals">
+              <Vital label="W" value={save.thirst} kind="w" />
+              <Vital label="F" value={save.hunger} kind="f" />
+              <Vital label="H" value={save.health} kind="h" />
+              <Vital label="C" value={save.comfort} kind="c" />
+              <button
+                type="button"
+                className={`mute-tog${audioMuted ? " off" : ""}`}
+                aria-label={audioMuted ? "Unmute weather" : "Mute weather"}
+                aria-pressed={audioMuted}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const next = !audioMuted;
+                  setAudioMuted(next);
+                  setMuted(next);
+                }}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden>
+                  {audioMuted ? (
+                    <>
+                      <path d="M4 10v4h3l4 3V7L7 10H4z" />
+                      <path d="M16 9l5 5M21 9l-5 5" />
+                    </>
+                  ) : (
+                    <>
+                      <path d="M4 10v4h3l4 3V7L7 10H4z" />
+                      <path d="M15 9.5a3.5 3.5 0 010 5" />
+                      <path d="M17.5 7a6 6 0 010 10" />
+                    </>
+                  )}
+                </svg>
+              </button>
+            </div>
 
-        <nav className="dock" aria-label="Dock">
-          <button type="button" className="tool" onClick={openDiary}>
-            <svg viewBox="0 0 24 24">
-              <path d="M5 4h11l3 3v13H5z" />
-              <path d="M9 9h6M9 13h6M9 17h4" />
-            </svg>
-            <em>Diary</em>
-          </button>
-          <button type="button" className="tool" onClick={openItems}>
-            <svg viewBox="0 0 24 24">
-              <path d="M3 8l9-4 9 4v8l-9 4-9-4z" />
-              <path d="M3 8l9 4 9-4M12 12v8" />
-            </svg>
-            <em>Items</em>
-            {save.inventory.length > 0 && <i />}
-          </button>
-          <button type="button" className="tool" onClick={openCraft}>
-            <svg viewBox="0 0 24 24">
-              <path d="M4 20l8-16 8 16z" />
-              <path d="M8 20l4-8 4 8" />
-            </svg>
-            <em>Build</em>
-          </button>
-          <button type="button" className="tool" onClick={openYou}>
-            <svg viewBox="0 0 24 24">
-              <circle cx="12" cy="8" r="4" />
-              <path d="M5 20c1-4 4-6 7-6s6 2 7 6" />
-            </svg>
-            <em>You</em>
-          </button>
-        </nav>
-      </div>
+            {HOTSPOTS.map((h) => (
+              <button
+                key={h.id}
+                type="button"
+                className={`spot ${h.className}`}
+                aria-label={h.title}
+                onClick={(e) => onSpotClick(h.id, e)}
+              />
+            ))}
 
-      <DiarySheet
-        open={diaryOpen}
-        onClose={() => setDiaryOpen(false)}
-      />
+            <div
+              className={`caption${openHotspot && !pickerKind ? " on" : ""}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2>{captionTitle}</h2>
+              <p>{captionBody}</p>
+              {showAction && captionAction ? (
+                <button type="button" className="act" onClick={onActionClick}>
+                  {captionAction}
+                </button>
+              ) : null}
+            </div>
 
-      <YouSheet
-        open={youOpen}
-        save={save}
-        weather={view.weather}
-        onClose={() => setYouOpen(false)}
-      />
+            <DurationPicker
+              open={
+                !!pickerKind &&
+                pickerKind !== "craft" &&
+                pickerKind !== "cook"
+              }
+              kind={
+                pickerKind === "craft" || pickerKind === "cook"
+                  ? null
+                  : pickerKind
+              }
+              weather={view.weather}
+              blockedReason={pickerBlocked}
+              onPick={onPickDuration}
+              onClose={() => setPickerKind(null)}
+            />
 
-      <ItemsSheet
-        open={itemsOpen}
-        inventory={save.inventory}
-        storageTier={save.storageTier}
-        onClose={() => setItemsOpen(false)}
-        onSetOutside={setOutside}
-        onEat={onEat}
-        onDestroy={onDestroy}
-      />
+            <nav className="dock" aria-label="Dock">
+              <button type="button" className="tool" onClick={openDiary}>
+                <svg viewBox="0 0 24 24">
+                  <path d="M5 4h11l3 3v13H5z" />
+                  <path d="M9 9h6M9 13h6M9 17h4" />
+                </svg>
+                <em>Diary</em>
+              </button>
+              <button type="button" className="tool" onClick={openItems}>
+                <svg viewBox="0 0 24 24">
+                  <path d="M3 8l9-4 9 4v8l-9 4-9-4z" />
+                  <path d="M3 8l9 4 9-4M12 12v8" />
+                </svg>
+                <em>Items</em>
+                {save.inventory.length > 0 && <i />}
+              </button>
+              <button type="button" className="tool" onClick={openCraft}>
+                <svg viewBox="0 0 24 24">
+                  <path d="M4 20l8-16 8 16z" />
+                  <path d="M8 20l4-8 4 8" />
+                </svg>
+                <em>Build</em>
+              </button>
+              <button type="button" className="tool" onClick={openYou}>
+                <svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M5 20c1-4 4-6 7-6s6 2 7 6" />
+                </svg>
+                <em>You</em>
+              </button>
+            </nav>
+          </div>
 
-      <CraftSheet
-        open={craftOpen}
-        save={save}
-        onClose={() => setCraftOpen(false)}
-        onCraft={onCraft}
-      />
+          <DiarySheet open={diaryOpen} onClose={() => setDiaryOpen(false)} />
 
-      <FireplaceScreen
-        open={fireplaceOpen}
-        save={save}
-        now={now}
-        onClose={() => setFireplaceOpen(false)}
-        onChange={(next) => {
-          const { state, death } = catchUp(next, Date.now());
-          if (death) {
-            handleDeath(death);
-            setSave(null);
-            setFireplaceOpen(false);
-            return;
-          }
-          commitSave(state);
-        }}
-      />
+          <YouSheet
+            open={youOpen}
+            save={save}
+            weather={view.weather}
+            onClose={() => setYouOpen(false)}
+          />
 
-      <ResultsPanel
-        results={save.pendingResults}
-        onDismiss={dismissResults}
-      />
+          <ItemsSheet
+            open={itemsOpen}
+            inventory={save.inventory}
+            storageTier={save.storageTier}
+            onClose={() => setItemsOpen(false)}
+            onSetOutside={setOutside}
+            onEat={onEat}
+            onDestroy={onDestroy}
+          />
 
-      <ContainerPanel
-        container={view.beach}
-        open={containerOpen}
-        onClose={() => setContainerOpen(false)}
-        onTake={takeContainer}
-      />
+          <CraftSheet
+            open={craftOpen}
+            save={save}
+            onClose={() => setCraftOpen(false)}
+            onCraft={onCraft}
+          />
+
+          <FireplaceScreen
+            open={fireplaceOpen}
+            save={save}
+            now={now}
+            onClose={() => setFireplaceOpen(false)}
+            onChange={(next) => {
+              const { state, death } = catchUp(next, Date.now());
+              if (death) {
+                handleDeath(death);
+                setSave(null);
+                setFireplaceOpen(false);
+                return;
+              }
+              commitSave(state);
+            }}
+          />
+
+          <ResultsPanel
+            results={save.pendingResults}
+            onDismiss={dismissResults}
+          />
+
+          <ContainerPanel
+            container={view.beach}
+            open={containerOpen}
+            onClose={() => setContainerOpen(false)}
+            onTake={takeContainer}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useRef } from "react";
+import { memo, useLayoutEffect, useRef } from "react";
 import {
   DAY_PART_CLASS,
   WEATHER_CLASS,
@@ -20,6 +20,17 @@ export type WorldSceneProps = {
   hasWater: boolean;
   /** 0–100 cup fill. */
   waterLevel: number;
+};
+
+export const DEFAULT_SCENE_PROPS: WorldSceneProps = {
+  dayPart: "golden",
+  weather: "clear",
+  pose: "stare",
+  fireLit: false,
+  hasFireplace: false,
+  hasShelter: false,
+  hasWater: false,
+  waterLevel: 0,
 };
 
 function setCupFill(svg: Element, pct: number) {
@@ -49,41 +60,61 @@ function worldClassName(p: WorldSceneProps): string {
     .join(" ");
 }
 
+function applyAppearance(host: HTMLDivElement, props: WorldSceneProps) {
+  const svg = host.querySelector("svg.scene");
+  if (!svg) return;
+  const nextClass = worldClassName(props);
+  if (svg.getAttribute("class") !== nextClass) {
+    svg.setAttribute("class", nextClass);
+  }
+  const level = props.hasWater ? props.waterLevel : 0;
+  const prev = host.dataset.waterLevel;
+  const next = String(level);
+  if (prev !== next) {
+    host.dataset.waterLevel = next;
+    setCupFill(svg, level);
+  }
+}
+
+function scenePropsEqual(a: WorldSceneProps, b: WorldSceneProps): boolean {
+  return (
+    a.dayPart === b.dayPart &&
+    a.weather === b.weather &&
+    a.pose === b.pose &&
+    a.fireLit === b.fireLit &&
+    a.hasFireplace === b.hasFireplace &&
+    a.hasShelter === b.hasShelter &&
+    a.hasWater === b.hasWater &&
+    a.waterLevel === b.waterLevel
+  );
+}
+
 /**
- * Beach SVG lives here once. Sim ticks must not remount it — CSS animations
- * (palms, flames, birds, waves) restart if the markup is rewritten.
+ * Beach SVG is injected once into a stable host. Simulation ticks must never
+ * remount this component — CSS palm/flame animations restart if the markup
+ * is rewritten or the host unmounts.
  */
 export const WorldScene = memo(function WorldScene(props: WorldSceneProps) {
-  const hostRef = useRef<HTMLDivElement>(null);
-  const injected = useRef(false);
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const propsRef = useRef(props);
+  propsRef.current = props;
 
-  // Inject markup exactly once for the life of this host.
-  useEffect(() => {
+  // Mount host + inject markup exactly once for this DOM node.
+  useLayoutEffect(() => {
     const host = hostRef.current;
-    if (!host || injected.current) return;
-    host.innerHTML = WORLD_SVG;
-    injected.current = true;
-    const svg = host.querySelector("svg.scene");
-    if (svg) {
-      svg.setAttribute("class", worldClassName(props));
-      setCupFill(svg, props.hasWater ? props.waterLevel : 0);
+    if (!host) return;
+    if (!host.dataset.injected) {
+      host.innerHTML = WORLD_SVG;
+      host.dataset.injected = "1";
     }
-    // props read only for initial paint; later updates go through the effect below
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    applyAppearance(host, propsRef.current);
   }, []);
 
-  // Appearance changes only — never rewrite innerHTML.
-  useEffect(() => {
-    if (!injected.current) return;
-    const svg = hostRef.current?.querySelector("svg.scene");
-    if (!svg) return;
-    const nextClass = worldClassName(props);
-    if (svg.getAttribute("class") !== nextClass) {
-      svg.setAttribute("class", nextClass);
-    }
-    setCupFill(svg, props.hasWater ? props.waterLevel : 0);
-    // Intentionally depend on scene fields, not the whole props object.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Appearance only — never touch innerHTML after inject.
+  useLayoutEffect(() => {
+    const host = hostRef.current;
+    if (!host?.dataset.injected) return;
+    applyAppearance(host, props);
   }, [
     props.dayPart,
     props.weather,
@@ -96,4 +127,4 @@ export const WorldScene = memo(function WorldScene(props: WorldSceneProps) {
   ]);
 
   return <div className="world-host" ref={hostRef} />;
-});
+}, scenePropsEqual);

@@ -7,10 +7,14 @@ import {
   type ContainerTier,
   type LootRarity,
 } from "./balance";
+import { pickDocumentItemId, veryRarePoolFor } from "./documents";
 import type { InventorySlot } from "./persist";
 import { rngFor, weightedPick } from "./rng";
 import { latestWeatherRollAt, tickIndexAt } from "./time";
 import { weatherAtRollMs } from "./weather";
+
+// Re-export for tests / callers that want the gated pool helper.
+export { veryRarePoolFor } from "./documents";
 
 export type BeachContainer = {
   tier: ContainerTier;
@@ -19,9 +23,21 @@ export type BeachContainer = {
   contents: InventorySlot[];
 };
 
-function pickFromPool(rng: () => number, rarity: LootRarity): string {
+function pickFromPool(
+  rng: () => number,
+  rarity: LootRarity,
+  tier: ContainerTier,
+  documentsRead: readonly number[],
+): string {
+  if (rarity === "very_rare") {
+    const pool = veryRarePoolFor(tier, documentsRead);
+    return pool[Math.floor(rng() * pool.length)]!;
+  }
   const pool = LOOT_POOLS[rarity];
-  return pool[Math.floor(rng() * pool.length)]!;
+  const id = pool[Math.floor(rng() * pool.length)]!;
+  // One common pool entry expands to a random numbered document (repeats ok).
+  if (id === "document") return pickDocumentItemId(rng);
+  return id;
 }
 
 function push(contents: InventorySlot[], itemId: string): void {
@@ -39,70 +55,73 @@ function rollContents(
   seed: string,
   tickIndex: number,
   tier: ContainerTier,
+  documentsRead: readonly number[],
 ): InventorySlot[] {
   const rng = rngFor(seed, "container-loot", tickIndex);
   const contents: InventorySlot[] = [];
+  const pick = (rarity: LootRarity) =>
+    pickFromPool(rng, rarity, tier, documentsRead);
 
   if (tier === "small") {
-    push(contents, pickFromPool(rng, "common"));
+    push(contents, pick("common"));
     const extra = rollExtra(rng, {
       second: 30,
       third: 10,
       none: 60,
     });
     if (extra === "second" || extra === "third") {
-      push(contents, pickFromPool(rng, "common"));
+      push(contents, pick("common"));
     }
     if (extra === "third") {
-      push(contents, pickFromPool(rng, "common"));
+      push(contents, pick("common"));
     }
   } else if (tier === "medium") {
-    push(contents, pickFromPool(rng, "common"));
-    push(contents, pickFromPool(rng, "common"));
+    push(contents, pick("common"));
+    push(contents, pick("common"));
     const extra = rollExtra(rng, {
       third: 50,
       rare: 30,
       two_rares: 10,
       none: 10,
     });
-    if (extra === "third") push(contents, pickFromPool(rng, "common"));
-    if (extra === "rare") push(contents, pickFromPool(rng, "rare"));
+    if (extra === "third") push(contents, pick("common"));
+    if (extra === "rare") push(contents, pick("rare"));
     if (extra === "two_rares") {
-      push(contents, pickFromPool(rng, "rare"));
-      push(contents, pickFromPool(rng, "rare"));
+      push(contents, pick("rare"));
+      push(contents, pick("rare"));
     }
   } else if (tier === "large") {
-    push(contents, pickFromPool(rng, "common"));
-    push(contents, pickFromPool(rng, "common"));
-    push(contents, pickFromPool(rng, "common"));
-    push(contents, pickFromPool(rng, "rare"));
+    push(contents, pick("common"));
+    push(contents, pick("common"));
+    push(contents, pick("common"));
+    push(contents, pick("rare"));
     const extra = rollExtra(rng, {
       second_rare: 50,
       very_rare: 30,
       both: 20,
     });
     if (extra === "second_rare" || extra === "both") {
-      push(contents, pickFromPool(rng, "rare"));
+      push(contents, pick("rare"));
     }
     if (extra === "very_rare" || extra === "both") {
-      push(contents, pickFromPool(rng, "very_rare"));
+      push(contents, pick("very_rare"));
     }
   } else {
     // chest
-    push(contents, pickFromPool(rng, "rare"));
-    push(contents, pickFromPool(rng, "rare"));
-    push(contents, pickFromPool(rng, "rare"));
-    push(contents, pickFromPool(rng, "very_rare"));
+    push(contents, pick("rare"));
+    push(contents, pick("rare"));
+    push(contents, pick("rare"));
+    push(contents, pick("very_rare"));
     const extra = rollExtra(rng, {
       further_rare: 50,
       second_vr: 30,
       third_vr: 20,
     });
-    if (extra === "further_rare") push(contents, pickFromPool(rng, "rare"));
-    if (extra === "second_vr") push(contents, pickFromPool(rng, "very_rare"));
+    if (extra === "further_rare") push(contents, pick("rare"));
+    if (extra === "second_vr") push(contents, pick("very_rare"));
     if (extra === "third_vr") {
-      push(contents, pickFromPool(rng, "very_rare"));
-      push(contents, pickFromPool(rng, "very_rare"));
+      push(contents, pick("very_rare"));
+      push(contents, pick("very_rare"));
     }
   }
 
@@ -120,7 +139,7 @@ function oddsTable(
 }
 
 /**
- * Pure function of (seed, current weather-roll tick).
+ * Pure function of (seed, current weather-roll tick, documents read).
  * Returns null for a "nothing" roll, or if the player already collected this tick.
  */
 export function beachContainerAt(
@@ -128,6 +147,7 @@ export function beachContainerAt(
   runStartedAt: number,
   now: number,
   collectedTickIndex: number | null,
+  documentsRead: readonly number[] = [],
 ): BeachContainer | null {
   const rollMs = latestWeatherRollAt(now, WEATHER_ROLL_HOURS);
   const tickIndex = tickIndexAt(rollMs);
@@ -143,7 +163,7 @@ export function beachContainerAt(
     tier: roll,
     tickIndex,
     rollMs,
-    contents: rollContents(seed, tickIndex, roll),
+    contents: rollContents(seed, tickIndex, roll, documentsRead),
   };
 }
 

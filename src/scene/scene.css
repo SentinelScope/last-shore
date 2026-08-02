@@ -233,6 +233,7 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .s-shore{left:52%;top:56%}
 .s-fire{left:34.4%;top:calc((100% - var(--dock-clearance)) * 735 / 844)}
 .s-water{left:17.9%;top:calc((100% - var(--dock-clearance)) * 778 / 844)}
+.s-tool-rack{left:50.8%;top:calc((100% - var(--dock-clearance)) * 748 / 844)}
 .s-storage{left:60.5%;top:calc((100% - var(--dock-clearance)) * 762 / 844)}
 .s-hut{left:79%;top:calc((100% - var(--dock-clearance)) * 680 / 844)}
 .s-palm{left:12%;top:52%}
@@ -420,6 +421,9 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 
 /* lean-to shelter hidden until crafted */
 .world:not(.has-shelter) .shelter{opacity:0;pointer-events:none}
+
+/* tool rack — small prop beside storage */
+.world:not(.has-tool-rack) .tool-rack-prop{display:none}
 
 /* water vessel + fill hidden until a container is placed; plinth always shows */
 .world:not(.has-water) #water-vessel,
@@ -672,6 +676,13 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .craft-head h1{font-family:var(--font-display),Georgia,serif;font-weight:400;font-size:20px}
 .craft-head .cap{margin-top:4px;font-size:9px;letter-spacing:.2em;text-transform:uppercase;opacity:.5}
 .craft-list{list-style:none;overflow-y:auto;padding:8px 10px 14px;max-height:70vh}
+.craft-band{list-style:none;margin:0;padding:0}
+.craft-band > ul{list-style:none;margin:0;padding:0}
+.craft-band-label{
+  margin:10px 10px 2px;font-size:9px;letter-spacing:.22em;text-transform:uppercase;
+  opacity:.42
+}
+.craft-band:first-child .craft-band-label{margin-top:2px}
 .craft-row{
   display:flex;gap:10px;align-items:flex-start;padding:12px 10px;
   border-bottom:1px solid rgba(237,231,221,.08)
@@ -691,6 +702,91 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
   background:rgba(255,178,92,.12);color:#FFC98A;border-radius:2px;cursor:pointer
 }
 .craft-go:disabled{opacity:.35;cursor:default;border-color:rgba(237,231,221,.2);color:#EDE7DD;background:transparent}
+
+/* ---------- tool rack panel ---------- */
+.tool-rack-sheet{
+  justify-content:flex-end;padding:12px 14px calc(env(safe-area-inset-bottom) + 100px);
+  z-index:12
+}
+.tool-rack-card{
+  width:100%;max-width:380px;margin:0 auto;padding:14px 14px 16px;
+  background:linear-gradient(180deg,#2A2218,#1A1510);
+  border:1px solid rgba(237,231,221,.16);border-radius:4px;color:#EDE7DD;
+  filter:drop-shadow(0 18px 36px rgba(0,0,0,.5))
+}
+.tool-rack-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tool-rack-head h2{font-family:var(--font-display),Georgia,serif;font-weight:400;font-size:18px;margin:0}
+.tool-rack-x{
+  background:none;border:1px solid rgba(237,231,221,.28);color:#EDE7DD;
+  font:inherit;font-size:9px;letter-spacing:.18em;text-transform:uppercase;
+  padding:7px 12px;cursor:pointer;border-radius:2px
+}
+.tool-rack-blurb{margin:8px 0 12px;font-size:12px;line-height:1.45;opacity:.65}
+.tool-rack-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tool-rack-slot{
+  position:relative;aspect-ratio:1;border-radius:4px;
+  border:1px dashed rgba(237,231,221,.28);
+  background:rgba(0,0,0,.18);min-height:88px;
+  display:flex;align-items:center;justify-content:center
+}
+.tool-rack-slot.drop-over{border-color:rgba(255,178,92,.65);background:rgba(255,178,92,.1)}
+.tool-rack-empty{font-size:9px;letter-spacing:.16em;text-transform:uppercase;opacity:.4}
+.tool-rack-tool{
+  width:100%;height:100%;border:0;background:transparent;color:inherit;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;padding:6px;cursor:pointer;font:inherit
+}
+.tool-rack-tool img{width:36px;height:36px;object-fit:contain}
+.tool-rack-tool .nm{font-size:8px;line-height:1.15;text-align:center;opacity:.8}
+.tool-rack-bar{
+  display:block;width:70%;height:3px;border-radius:1px;background:rgba(237,231,221,.15);overflow:hidden
+}
+.tool-rack-bar > span{display:block;height:100%;background:#C4A060}
+.tool-rack-tool .uses{font-size:9px;opacity:.65}
+.tool-rack-hint{margin:10px 0 0;font-size:12px;color:#FFB25C;opacity:.9}
+.tool-rack-strip{
+  display:flex;gap:8px;overflow-x:auto;margin-top:14px;padding-top:12px;
+  border-top:1px solid rgba(237,231,221,.1);-webkit-overflow-scrolling:touch
+}
+.tool-rack-strip .slot{
+  flex:none;width:58px;height:58px;position:relative;
+  border:1px solid rgba(237,231,221,.2);border-radius:4px;
+  background:rgba(0,0,0,.2);display:grid;place-items:center;padding:4px
+}
+.tool-rack-strip .slot img{width:36px;height:36px;object-fit:contain}
+.tool-rack-strip .qty,.tool-rack-strip .uses{
+  position:absolute;right:3px;bottom:2px;font-size:9px;opacity:.8
+}
+.tool-rack-strip-empty{font-size:11px;opacity:.45;margin:0;padding:4px 0}
+
+/* ---------- secret photograph look ---------- */
+.secret-look{
+  position:fixed;inset:0;z-index:80;
+  background:#050505;
+  display:flex;align-items:center;justify-content:center;
+  padding:
+    max(12px, env(safe-area-inset-top, 0px))
+    max(12px, env(safe-area-inset-right, 0px))
+    max(12px, env(safe-area-inset-bottom, 0px))
+    max(12px, env(safe-area-inset-left, 0px));
+  touch-action:none;-webkit-user-select:none;user-select:none
+}
+.secret-look-img{
+  max-width:100%;max-height:100%;width:auto;height:auto;
+  object-fit:contain;object-position:center;
+  transform-origin:center center;
+  cursor:grab;touch-action:none;pointer-events:auto
+}
+.secret-look-close{
+  position:absolute;
+  top:max(10px, env(safe-area-inset-top, 0px));
+  right:max(10px, env(safe-area-inset-right, 0px));
+  z-index:1;
+  background:rgba(0,0,0,.45);border:1px solid rgba(237,231,221,.28);
+  color:rgba(237,231,221,.75);font:inherit;font-size:9px;
+  letter-spacing:.18em;text-transform:uppercase;
+  padding:8px 12px;cursor:pointer;border-radius:2px
+}
 
 
 .dock{position:absolute;left:0;right:0;bottom:0;padding:14px 22px calc(env(safe-area-inset-bottom) + 18px);
@@ -750,6 +846,30 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .sheetClose{margin:16px auto 0;flex:none;background:none;border:1px solid rgba(237,231,221,.3);
   color:#EDE7DD;font-family:inherit;font-size:10px;letter-spacing:.22em;text-transform:uppercase;
   padding:9px 22px;cursor:pointer;border-radius:2px}
+
+/* ---------- government report (documents) ---------- */
+.report-wrap{filter:drop-shadow(0 18px 36px rgba(0,0,0,.5))}
+.report-edge{height:6px;flex:none;margin:0 -4px;
+  background:linear-gradient(#9A9B96,#6E6F6A 55%,#4A4B47);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.report{position:relative;overflow-y:auto;padding:22px 22px 28px;color:#2C3034;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.35),transparent 28%),
+    linear-gradient(#ECEBE6,#E4E3DD 55%,#DCDAD3);
+  border-left:1px solid rgba(60,64,70,.14);border-right:1px solid rgba(60,64,70,.14)}
+.report h1{font-family:'Karla',system-ui,sans-serif;font-weight:600;font-size:15px;
+  letter-spacing:.14em;text-transform:uppercase;text-align:center;margin-bottom:4px;
+  color:#1F2327}
+.report .sub{text-align:center;font-family:'Karla',system-ui,sans-serif;font-size:9px;
+  letter-spacing:.2em;text-transform:uppercase;opacity:.45;margin-bottom:18px}
+.report-body{margin:0;font-family:ui-monospace,"Cascadia Mono","Segoe UI Mono",Menlo,Consolas,monospace;
+  font-size:11.5px;line-height:1.55;white-space:pre-wrap;word-break:break-word;
+  color:#2A2E32;opacity:.92}
+.doc-recovered{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}
+.doc-num{min-width:28px;padding:4px 7px;border:1px solid rgba(237,231,221,.28);
+  background:transparent;color:rgba(237,231,221,.7);font:inherit;font-size:10px;
+  letter-spacing:.08em;cursor:pointer;border-radius:2px}
+.doc-num.on,.doc-num:hover{border-color:rgba(255,178,92,.55);color:#FFC98A}
 
 /* ---------- items ---------- */
 .crate{display:flex;flex-direction:column;max-height:100%;width:100%;

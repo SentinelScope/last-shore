@@ -286,6 +286,15 @@ export const ITEMS: Record<string, ItemDef> = {
     tags: [["water", "Holds 100"]],
   },
   photo: comfort("photo", "Photo", "Four people at a table. You have decided who they are.", 2),
+  lab04_s4_a51: {
+    id: "lab04_s4_a51",
+    name: "LAB04_S4_A51",
+    type: "Comfort · carried",
+    description:
+      "This picture was not ment for you. Someone left a cryptic note on the back: R FJWC CX KNURNEN.",
+    stack: 1,
+    tags: [["comf", "-10 Comfort"]],
+  },
   magazine: comfort(
     "magazine",
     "Magazine",
@@ -299,6 +308,87 @@ export const ITEMS: Record<string, ItemDef> = {
     3,
   ),
   book: comfort("book", "Book", "Swollen with salt water. The last forty pages are gone.", 4),
+  document_1: {
+    id: "document_1",
+    name: "Document #1",
+    type: "Document",
+    description:
+      "A salvaged page from a closed government file. The header is still stamped TOP SECRET.",
+    stack: 1,
+    tags: [],
+  },
+  document_2: {
+    id: "document_2",
+    name: "Document #2",
+    type: "Document",
+    description:
+      "A salvaged page from a closed government file. Someone filed this with the rest.",
+    stack: 1,
+    tags: [],
+  },
+  document_3: {
+    id: "document_3",
+    name: "Document #3",
+    type: "Document",
+    description:
+      "A salvaged page from a closed government file. The agency letterhead survived the sea.",
+    stack: 1,
+    tags: [],
+  },
+  document_4: {
+    id: "document_4",
+    name: "Document #4",
+    type: "Document",
+    description:
+      "A salvaged page from a closed government file. The ink ran in places, then dried.",
+    stack: 1,
+    tags: [],
+  },
+  document_5: {
+    id: "document_5",
+    name: "Document #5",
+    type: "Document",
+    description:
+      "A salvaged page from a closed government file. Interview notes, typed neat.",
+    stack: 1,
+    tags: [],
+  },
+  document_6: {
+    id: "document_6",
+    name: "Document #6",
+    type: "Document",
+    description:
+      "A salvaged page from a closed government file. A statistical bulletin, of all things.",
+    stack: 1,
+    tags: [],
+  },
+  document_7: {
+    id: "document_7",
+    name: "Document #7",
+    type: "Document",
+    description:
+      "A salvaged page from a closed government file. Timestamps and not much else.",
+    stack: 1,
+    tags: [],
+  },
+  document_8: {
+    id: "document_8",
+    name: "Document #8",
+    type: "Document",
+    description:
+      "A salvaged page from a closed government file. A personal note slipped into the stack.",
+    stack: 1,
+    tags: [],
+  },
+  document_9: {
+    id: "document_9",
+    name: "Document #9",
+    type: "Document",
+    description:
+      "A salvaged page from a closed government file. The last page in the dossier.",
+    stack: 1,
+    tags: [],
+  },
   handkerchief: comfort(
     "handkerchief",
     "Handkerchief",
@@ -524,6 +614,22 @@ export const ITEMS: Record<string, ItemDef> = {
     stack: 1,
     tags: [],
   },
+  fishing_rod: {
+    id: "fishing_rod",
+    name: "Fishing Rod",
+    type: "Tool · durability",
+    description: "A proper rod. Eighty casts if you treat it kindly.",
+    stack: 1,
+    tags: [],
+  },
+  tool_rack: {
+    id: "tool_rack",
+    name: "Tool Rack",
+    type: "Structure",
+    description: "Three pegs by the stores. Tools live here, not in your pack.",
+    stack: 1,
+    tags: [],
+  },
   satchel: {
     id: "satchel",
     name: "Satchel",
@@ -567,8 +673,11 @@ export function itemActions(def: ItemDef): string[] {
   if (def.type.startsWith("Container")) return ["Drink", "Set outside", "Destroy"];
   if (def.type.startsWith("Medicine")) return ["Apply", "Destroy"];
   if (def.type.startsWith("Comfort")) {
-    return def.id === "voice_recorder" ? ["Play", "Destroy"] : ["Destroy"];
+    if (def.id === "voice_recorder") return ["Play", "Destroy"];
+    if (def.id === "lab04_s4_a51") return ["Look", "Destroy"];
+    return ["Destroy"];
   }
+  if (def.type.startsWith("Document")) return ["Read", "Destroy"];
   if (def.type.startsWith("Clothing")) return ["Wear", "Destroy"];
   if (def.type.startsWith("Tool") || def.type.startsWith("Material") || def.type.startsWith("Storage")) {
     return ["Destroy"];

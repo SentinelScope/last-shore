@@ -2,13 +2,19 @@ import type { ItemDef } from "./items";
 import manifest from "../../public/items/_manifest.json";
 
 type ItemManifest = {
-  files: string[];
+  files?: string[];
+  /** Bare item ids (no .png) — preferred in the checked-in manifest. */
+  canonical?: string[];
   aliases: Record<string, string>;
 };
 
 const data = manifest as ItemManifest;
 
-const FILE_SET = new Set(data.files);
+const FILE_SET = new Set(
+  (data.files ?? data.canonical ?? []).map((name) =>
+    name.endsWith(".png") ? name : `${name}.png`,
+  ),
+);
 const ALIASES = data.aliases;
 
 /** Resolve an item/recipe id to a PNG filename that exists in the manifest. */

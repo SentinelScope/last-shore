@@ -4,7 +4,8 @@ export type HotspotId =
   | "water"
   | "fire"
   | "hut"
-  | "storage";
+  | "storage"
+  | "tool_rack";
 
 export type HotspotDef = {
   id: HotspotId;
@@ -55,6 +56,13 @@ export const HOTSPOTS: HotspotDef[] = [
     className: "s-storage",
     title: "Storage",
     description: "Where your supplies live.",
+    action: "Open",
+  },
+  {
+    id: "tool_rack",
+    className: "s-tool-rack",
+    title: "Tool Rack",
+    description: "Three pegs by the stores. Tools live here.",
     action: "Open",
   },
 ];

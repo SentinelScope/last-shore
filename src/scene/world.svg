@@ -162,6 +162,12 @@
     <image id="storage-b" class="storage-struct" href="/structures/storage_sand.png"
            x="194.109" y="690" width="83.782" height="83.782" opacity="0" preserveAspectRatio="xMidYMax meet"/>
   </g>
+  <!-- Tool rack — small, beside storage; shown when built -->
+  <g class="tool-rack-prop" opacity="0">
+    <ellipse id="tool-rack-shadow" cx="198" cy="748" rx="14" ry="3.5" fill="#2C2A2E" opacity="var(--shadow-op)" filter="url(#blur6)"/>
+    <image id="tool-rack" class="tool-rack-struct" href="/items/tool_rack.png"
+           x="170.073" y="700" width="55.855" height="55.855" preserveAspectRatio="xMidYMax meet"/>
+  </g>
   <g stroke="var(--wood-dark)" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".9">
     <path d="M336 700l-6 26M366 704l6 26M334 700h34"/>
     <path d="M342 702v10M352 703v10M362 704v10" stroke-width="1.6" opacity=".6"/>

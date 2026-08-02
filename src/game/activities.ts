@@ -30,13 +30,9 @@ import type {
 } from "./persist";
 import { rngFor, weightedPick } from "./rng";
 import { tickIndexAt } from "./time";
+import { bestCutTool, hasTool, withToolDurability } from "./tools";
 
-export function bestCutTool(inventory: SaveState["inventory"]): CutTool | null {
-  if (hasItem(inventory, "metal_axe")) return "metal_axe";
-  if (hasItem(inventory, "stone_axe")) return "stone_axe";
-  if (hasItem(inventory, "stone")) return "bare";
-  return null;
-}
+export { bestCutTool } from "./tools";
 
 export function canStartActivity(
   state: SaveState,
@@ -49,7 +45,7 @@ export function canStartActivity(
     };
   }
   if (kind === "cut") {
-    if (!bestCutTool(state.inventory)) {
+    if (!bestCutTool(state)) {
       return { ok: false, reason: "Needs a stone in your inventory." };
     }
   }
@@ -65,7 +61,7 @@ export function startActivity(
   const gate = canStartActivity(state, kind);
   if (!gate.ok) return state;
 
-  const tool = kind === "cut" ? bestCutTool(state.inventory)! : undefined;
+  const tool = kind === "cut" ? bestCutTool(state)! : undefined;
   const duration = ACTIVITY_DURATIONS[durationId];
   const activity: ActiveActivity = {
     kind,
@@ -95,6 +91,9 @@ export function canStartCraft(
   if (recipe.effect === "satchel" && state.storageTier !== "sand") {
     return { ok: false, reason: "Already using a better store." };
   }
+  if (recipe.effect === "tool_rack" && state.hasToolRack) {
+    return { ok: false, reason: "Tool rack already built." };
+  }
   if (recipe.effect === "mat" && state.bedTier !== "none") {
     return { ok: false, reason: "Already have a mat." };
   }
@@ -122,7 +121,7 @@ export function canStartCraft(
           : "Needs a walled shelter first.",
     };
   }
-  if (recipe.tool && !hasItem(state.inventory, recipe.tool)) {
+  if (recipe.tool && !hasTool(state, recipe.tool)) {
     const toolName = recipe.tool.replace(/_/g, " ");
     return { ok: false, reason: `Needs ${toolName}.` };
   }
@@ -224,27 +223,45 @@ function resolveCraft(state: SaveState, now: number): SaveState {
   let bedTier = state.bedTier;
   let hasLogChair = state.hasLogChair;
   let shelterTier = state.shelterTier;
+  let hasToolRack = state.hasToolRack;
   const kept: LootPile = [];
   const lost: LootPile = [];
   let pendingOverflow = state.pendingOverflow;
 
   if (recipe.result) {
-    if (lootFits(inventory, storageTier, [recipe.result])) {
-      const placed = placeLoot(inventory, storageTier, [recipe.result]);
-      inventory = placed.inventory;
+    const resultSlot = withToolDurability({
+      itemId: recipe.result.itemId,
+      qty: recipe.result.qty,
+    });
+    const pile = [
+      {
+        itemId: resultSlot.itemId,
+        qty: resultSlot.qty,
+      },
+    ];
+    if (lootFits(inventory, storageTier, pile)) {
+      const placed = placeLoot(inventory, storageTier, pile);
+      inventory = placed.inventory.map((s) =>
+        s.itemId === resultSlot.itemId && resultSlot.durability !== undefined
+          ? { ...s, durability: s.durability ?? resultSlot.durability }
+          : s,
+      );
       kept.push(...placed.kept);
       lost.push(...placed.lost);
     } else {
       pendingOverflow = makeOverflow(
         `Crafted · ${recipe.name}`,
         "Found",
-        [recipe.result],
+        pile,
       );
     }
   }
 
   if (recipe.effect === "satchel") {
     storageTier = "satchel";
+  }
+  if (recipe.effect === "tool_rack") {
+    hasToolRack = true;
   }
   if (recipe.effect === "simple_fireplace") {
     fireplace = {
@@ -279,6 +296,7 @@ function resolveCraft(state: SaveState, now: number): SaveState {
       bedTier,
       hasLogChair,
       shelterTier,
+      hasToolRack,
       pendingOverflow,
       pendingResults: null,
     };
@@ -316,6 +334,7 @@ function resolveCraft(state: SaveState, now: number): SaveState {
     bedTier,
     hasLogChair,
     shelterTier,
+    hasToolRack,
     pendingResults,
     pendingOverflow: null,
   };

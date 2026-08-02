@@ -27,6 +27,7 @@ import {
   type RecipeId,
 } from "@/game/balance";
 import { beachContainerAt, containerTitle } from "@/game/containers";
+import { noteDocumentsFound, noteDocumentRead } from "@/game/documents";
 import { writeContainerDiary } from "@/game/diary";
 import { HOTSPOTS, type HotspotId } from "@/game/hotspots";
 import { ITEMS } from "@/game/items";
@@ -84,6 +85,7 @@ import { OmenWarning } from "./OmenWarning";
 import { DropTarget, PointerDragProvider } from "./pointerDrag";
 import { ResultsPanel } from "./ResultsPanel";
 import { ShelterScreen } from "./ShelterScreen";
+import { ToolRackPanel } from "./ToolRackPanel";
 import { WorldScene, DEFAULT_SCENE_PROPS, type WorldSceneProps } from "./WorldScene";
 import { YouSheet } from "./YouSheet";
 import "@/scene/scene.css";
@@ -151,6 +153,7 @@ function deriveSceneProps(save: SaveState, now: number): WorldSceneProps {
         : "simple",
     storageTier: save.storageTier,
     hasShelter: save.shelterTier !== "none",
+    hasToolRack: !!save.hasToolRack,
     hasWater,
     waterItemId: save.waterSpot.itemId,
     waterLevel,
@@ -168,6 +171,7 @@ function scenePropsEqual(a: WorldSceneProps, b: WorldSceneProps): boolean {
     a.fireplaceTier === b.fireplaceTier &&
     a.storageTier === b.storageTier &&
     a.hasShelter === b.hasShelter &&
+    a.hasToolRack === b.hasToolRack &&
     a.hasWater === b.hasWater &&
     a.waterItemId === b.waterItemId &&
     a.waterLevel === b.waterLevel &&
@@ -189,6 +193,7 @@ export function BeachScene() {
   const [containerOpen, setContainerOpen] = useState(false);
   const [fireplaceOpen, setFireplaceOpen] = useState(false);
   const [shelterOpen, setShelterOpen] = useState(false);
+  const [toolRackOpen, setToolRackOpen] = useState(false);
   const [ending, setEnding] = useState<DeathInfo | null>(null);
   const [omenConfirm, setOmenConfirm] = useState<{
     kind: "scour" | "cut";
@@ -340,6 +345,7 @@ export function BeachScene() {
       save.runStartedAt,
       now,
       save.collectedTickIndex,
+      save.documentsRead ?? [],
     );
     return { dayPart, weather, pose, day, beach };
   }, [save, now]);
@@ -398,6 +404,7 @@ export function BeachScene() {
     if (id === "fire" && save.fireplace.built !== "none") {
       setFireplaceOpen(true);
       setShelterOpen(false);
+      setToolRackOpen(false);
       setOpenSpot(null);
       setRevealed(false);
       if (idleRef.current) window.clearTimeout(idleRef.current);
@@ -407,6 +414,17 @@ export function BeachScene() {
     if (id === "hut" && save.shelterTier !== "none") {
       setShelterOpen(true);
       setFireplaceOpen(false);
+      setToolRackOpen(false);
+      setOpenSpot(null);
+      setRevealed(false);
+      if (idleRef.current) window.clearTimeout(idleRef.current);
+      return;
+    }
+
+    if (id === "tool_rack" && save.hasToolRack) {
+      setToolRackOpen(true);
+      setFireplaceOpen(false);
+      setShelterOpen(false);
       setOpenSpot(null);
       setRevealed(false);
       if (idleRef.current) window.clearTimeout(idleRef.current);
@@ -532,43 +550,47 @@ export function BeachScene() {
     const at = Date.now();
 
     if (!lootFits(save.inventory, save.storageTier, beach.contents)) {
-      let next: SaveState = {
-        ...save,
-        collectedTickIndex: beach.tickIndex,
-        pendingOverflow: makeOverflow(
-          containerTitle(beach.tier),
-          "Washed up",
-          beach.contents,
-        ),
-        pendingResults: null,
-      };
-      next = writeContainerDiary(next, {
-        tier: beach.tier,
-        kept: beach.contents,
-        at,
-      });
-      commitSave(next);
-      setContainerOpen(false);
-      return;
-    }
-
-    const { inventory, kept, lost } = placeLoot(
-      save.inventory,
-      save.storageTier,
-      beach.contents,
-    );
     let next: SaveState = {
       ...save,
-      inventory,
       collectedTickIndex: beach.tickIndex,
-      pendingResults: {
-        title: containerTitle(beach.tier),
-        kept,
-        lost,
-        resolvedAt: at,
-      },
-      pendingOverflow: null,
+      pendingOverflow: makeOverflow(
+        containerTitle(beach.tier),
+        "Washed up",
+        beach.contents,
+      ),
+      pendingResults: null,
     };
+    next = writeContainerDiary(next, {
+      tier: beach.tier,
+      kept: beach.contents,
+      at,
+    });
+    commitSave(next);
+    setContainerOpen(false);
+    return;
+  }
+
+  const { inventory, kept, lost } = placeLoot(
+    save.inventory,
+    save.storageTier,
+    beach.contents,
+  );
+  let next: SaveState = {
+    ...save,
+    inventory,
+    collectedTickIndex: beach.tickIndex,
+    pendingResults: {
+      title: containerTitle(beach.tier),
+      kept,
+      lost,
+      resolvedAt: at,
+    },
+    pendingOverflow: null,
+    recoveredDocuments: noteDocumentsFound(
+      save.recoveredDocuments ?? [],
+      kept.map((s) => s.itemId),
+    ),
+  };
     next = writeContainerDiary(next, {
       tier: beach.tier,
       kept,
@@ -921,7 +943,9 @@ export function BeachScene() {
               </button>
             </div>
 
-            {HOTSPOTS.map((h) => (
+            {HOTSPOTS.filter(
+              (h) => h.id !== "tool_rack" || !!save.hasToolRack,
+            ).map((h) => (
               <button
                 key={h.id}
                 type="button"
@@ -1014,6 +1038,14 @@ export function BeachScene() {
             open={itemsOpen}
             inventory={save.inventory}
             storageTier={save.storageTier}
+            recoveredDocuments={save.recoveredDocuments}
+            onDocumentRead={(n) => {
+              const next = {
+                ...save,
+                documentsRead: noteDocumentRead(save.documentsRead ?? [], n),
+              };
+              commitSave(next);
+            }}
             onClose={() => setItemsOpen(false)}
             onSetOutside={setOutside}
             onEat={onEat}
@@ -1049,6 +1081,15 @@ export function BeachScene() {
             open={shelterOpen}
             save={save}
             onClose={() => setShelterOpen(false)}
+            onChange={(next) => {
+              commitSave(next);
+            }}
+          />
+
+          <ToolRackPanel
+            open={toolRackOpen}
+            save={save}
+            onClose={() => setToolRackOpen(false)}
             onChange={(next) => {
               commitSave(next);
             }}

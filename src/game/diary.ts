@@ -15,6 +15,7 @@ import {
   type ContainerTier,
   type DurationId,
 } from "./balance";
+import { documentNumber } from "./documents";
 import { ITEMS } from "./items";
 import type { InventorySlot, SaveState } from "./persist";
 import { rngFor } from "./rng";
@@ -530,6 +531,38 @@ export function writeLeftBehindDiary(
     deltas: [],
     kind: "activity",
     at: args.at,
+  });
+}
+
+/** Lighting the fire with a salvaged document page. */
+export function writeBurnedDocumentDiary(
+  state: SaveState,
+  opts: { itemId: string; at: number },
+): SaveState {
+  const n = documentNumber(opts.itemId);
+  if (n == null) return state;
+  const rng = rngFor(state.seed, "diary-burn-doc", tickIndexAt(opts.at));
+  const lines = [
+    () =>
+      `Burned Document #${n} to get the fire going. It was mostly about pigeons anyway.`,
+    () =>
+      `Document #${n} made decent tinder. The typed lines curled before I could finish them.`,
+    () =>
+      `Fed Document #${n} to the fire. Whatever committee wrote it can stay warm with me.`,
+    () =>
+      `Document #${n} went into the pit. Ash reads the same as classified ink.`,
+    () =>
+      `Lit the fire with Document #${n}. Paper is paper when the night is this cold.`,
+    () =>
+      `Burned Document #${n}. If it mattered, it should have stayed dry.`,
+  ];
+  return appendDiaryEntry(state, {
+    id: newId(state.seed, "burn-doc", opts.at),
+    dayNumber: dayNumber(state.runStartedAt, opts.at),
+    text: pick(rng, lines)(),
+    deltas: [],
+    kind: "activity",
+    at: opts.at,
   });
 }
 

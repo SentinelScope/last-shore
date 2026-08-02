@@ -29,7 +29,7 @@ export type PointerDragPayload = {
   artSrc: string;
   inventoryIndex: number;
   /** Discriminator for drop handlers. */
-  kind: "inventory" | "water" | "comfort" | "duct_tape";
+  kind: "inventory" | "water" | "comfort" | "duct_tape" | "tool";
 };
 
 type DropRegistration = {

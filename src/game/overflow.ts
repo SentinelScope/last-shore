@@ -3,6 +3,7 @@
  */
 
 import { storageSlotCount, type StorageTierId } from "./balance";
+import { noteDocumentsFound } from "./documents";
 import { writeLeftBehindDiary } from "./diary";
 import { ITEMS } from "./items";
 import type { InventorySlot, PendingOverflow, SaveState } from "./persist";
@@ -122,6 +123,10 @@ export function confirmOverflow(
       lost: left,
       resolvedAt: opts.at,
     },
+    recoveredDocuments: noteDocumentsFound(
+      state.recoveredDocuments ?? [],
+      placed.kept.map((s) => s.itemId),
+    ),
   };
 
   if (left.length > 0) {

@@ -10,6 +10,7 @@ import {
 } from "./balance";
 import type { DiaryEntry } from "./diary";
 import { makeSeed } from "./rng";
+import { emptyToolRack } from "./tools";
 
 export type InventorySlot = {
   itemId: string;
@@ -129,6 +130,14 @@ export type SaveState = {
   ailments: ActiveAilment[];
   /** Equipped clothing by body slot. */
   worn: WornGear;
+  /** Document numbers found and not burned (1–9). */
+  recoveredDocuments: number[];
+  /** Document numbers read at least once — permanent, survives burns. */
+  documentsRead: number[];
+  /** Built the Tool Rack (separate from storage tier). */
+  hasToolRack: boolean;
+  /** Up to three tools living on the rack. */
+  toolRack: (InventorySlot | null)[];
 };
 
 export function emptyFireplace(): FireplaceState {
@@ -256,6 +265,28 @@ function migrate(raw: SaveState): SaveState {
           feet: raw.worn.feet ?? null,
         }
       : { head: null, body: null, legs: null, feet: null },
+    recoveredDocuments: Array.isArray(raw.recoveredDocuments)
+      ? raw.recoveredDocuments.filter(
+          (n): n is number => typeof n === "number" && n >= 1 && n <= 9,
+        )
+      : [],
+    documentsRead: Array.isArray(raw.documentsRead)
+      ? raw.documentsRead.filter(
+          (n): n is number => typeof n === "number" && n >= 1 && n <= 9,
+        )
+      : [],
+    hasToolRack: raw.hasToolRack ?? false,
+    toolRack: Array.isArray(raw.toolRack)
+      ? [0, 1, 2].map((i) => {
+          const s = raw.toolRack![i];
+          if (!s || typeof s.itemId !== "string") return null;
+          return {
+            itemId: s.itemId,
+            qty: 1,
+            durability: s.durability,
+          };
+        })
+      : emptyToolRack(),
   };
 }
 
@@ -315,6 +346,10 @@ export function createNewRun(now = Date.now()): SaveState {
     diaryWaterFullNoted: false,
     ailments: [],
     worn: { head: null, body: null, legs: null, feet: null },
+    recoveredDocuments: [],
+    documentsRead: [],
+    hasToolRack: false,
+    toolRack: emptyToolRack(),
   };
 }
 

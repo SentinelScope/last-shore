@@ -41,6 +41,12 @@ import {
   waterSrcToScene,
   type WaterVesselId,
 } from "@/game/waterArt";
+import {
+  BEACH_TOOL_RACK_FEET,
+  BEACH_TOOL_RACK_SCALE,
+  TOOL_RACK_SRC,
+  toolRackImageRect,
+} from "@/game/toolRackArt";
 import { WORLD_SVG } from "@/scene/worldMarkup";
 
 /** PNG ground line y=880, centre x=512 → standing figure ≈80 SVG units tall. */
@@ -73,6 +79,7 @@ export type WorldSceneProps = {
   fireplaceTier: FireplaceBuiltTier;
   storageTier: StorageTierId;
   hasShelter: boolean;
+  hasToolRack: boolean;
   hasWater: boolean;
   /** Placed vessel itemId, or null when empty. */
   waterItemId: string | null;
@@ -91,6 +98,7 @@ export const DEFAULT_SCENE_PROPS: WorldSceneProps = {
   fireplaceTier: "simple",
   storageTier: "sand",
   hasShelter: false,
+  hasToolRack: false,
   hasWater: false,
   waterItemId: null,
   waterLevel: 0,
@@ -203,6 +211,7 @@ function worldClassName(p: WorldSceneProps): string {
     p.hasFireplace ? "has-fireplace" : "",
     p.fireLit ? "fire-lit" : "",
     p.hasShelter ? "has-shelter" : "",
+    p.hasToolRack ? "has-tool-rack" : "",
     p.hasWater ? "has-water" : "",
     p.figureVisible ? "" : "figure-away",
   ]
@@ -370,6 +379,24 @@ function applyStorageTier(
   host.dataset.storageTier = tier;
 }
 
+function placeToolRack(svg: Element, built: boolean) {
+  const prop = svg.querySelector(".tool-rack-prop");
+  const img = svg.querySelector("#tool-rack");
+  const shadow = svg.querySelector("#tool-rack-shadow");
+  if (prop) prop.setAttribute("opacity", built ? "1" : "0");
+  if (!img) return;
+  const rect = toolRackImageRect(BEACH_TOOL_RACK_FEET, BEACH_TOOL_RACK_SCALE);
+  setImageHref(img, TOOL_RACK_SRC);
+  img.setAttribute("x", String(rect.x));
+  img.setAttribute("y", String(rect.y));
+  img.setAttribute("width", String(rect.size));
+  img.setAttribute("height", String(rect.size));
+  if (shadow) {
+    shadow.setAttribute("cx", String(BEACH_TOOL_RACK_FEET.x));
+    shadow.setAttribute("cy", String(BEACH_TOOL_RACK_FEET.y));
+  }
+}
+
 function applyAppearance(host: HTMLDivElement, props: WorldSceneProps) {
   const svg = host.querySelector("svg.scene");
   if (!svg) return;
@@ -384,6 +411,10 @@ function applyAppearance(host: HTMLDivElement, props: WorldSceneProps) {
   }
   applyFireplaceTier(host, svg, props.fireplaceTier, props.hasFireplace);
   applyStorageTier(host, svg, props.storageTier);
+  if (host.dataset.toolRack !== String(props.hasToolRack)) {
+    host.dataset.toolRack = String(props.hasToolRack);
+    placeToolRack(svg, props.hasToolRack);
+  }
   const level = props.hasWater ? props.waterLevel : 0;
   const vesselKey = props.hasWater ? (props.waterItemId ?? "") : "";
   const waterKey = `${vesselKey}|${level}`;
@@ -411,6 +442,7 @@ function scenePropsEqual(a: WorldSceneProps, b: WorldSceneProps): boolean {
     a.fireplaceTier === b.fireplaceTier &&
     a.storageTier === b.storageTier &&
     a.hasShelter === b.hasShelter &&
+    a.hasToolRack === b.hasToolRack &&
     a.hasWater === b.hasWater &&
     a.waterItemId === b.waterItemId &&
     a.waterLevel === b.waterLevel &&
@@ -447,6 +479,7 @@ export const WorldScene = memo(function WorldScene(props: WorldSceneProps) {
     props.fireplaceTier,
     props.storageTier,
     props.hasShelter,
+    props.hasToolRack,
     props.hasWater,
     props.waterItemId,
     props.waterLevel,

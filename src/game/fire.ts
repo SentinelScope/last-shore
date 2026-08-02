@@ -8,10 +8,16 @@ import {
   IGNITION_USES,
   WEATHER_ROLL_HOURS,
 } from "./balance";
+import {
+  isBurnablePaper,
+  isDocumentItemId,
+  withoutRecoveredDocument,
+} from "./documents";
 import { placeLoot, removeFromSlot } from "./inventory";
 import type { InventorySlot, SaveState } from "./persist";
 import { latestWeatherRollAt } from "./time";
 import { nextWeatherRollAfter, weatherAt } from "./weather";
+import { writeBurnedDocumentDiary } from "./diary";
 
 function stormDuring(
   seed: string,
@@ -125,25 +131,36 @@ export function lightFire(state: SaveState, now: number): SaveState {
   if (!canLight(next)) return next;
   const fp = next.fireplace;
   const ign = fp.slots.ignition!;
+  const tinder = fp.slots.tinder!;
   const uses = (ign.durability ?? IGNITION_USES[ign.itemId] ?? 1) - 1;
 
-  return resumeFireCook(
-    {
-      ...next,
-      fireplace: {
-        ...fp,
-        lit: true,
-        syncedAt: now,
-        slots: {
-          ...fp.slots,
-          tinder: null,
-          ignition:
-            uses <= 0 ? null : { ...ign, qty: 1, durability: uses },
-        },
+  let lit: SaveState = {
+    ...next,
+    fireplace: {
+      ...fp,
+      lit: true,
+      syncedAt: now,
+      slots: {
+        ...fp.slots,
+        tinder: null,
+        ignition:
+          uses <= 0 ? null : { ...ign, qty: 1, durability: uses },
       },
     },
-    now,
-  );
+  };
+
+  if (isDocumentItemId(tinder.itemId)) {
+    lit = {
+      ...lit,
+      recoveredDocuments: withoutRecoveredDocument(
+        lit.recoveredDocuments ?? [],
+        tinder.itemId,
+      ),
+    };
+    lit = writeBurnedDocumentDiary(lit, { itemId: tinder.itemId, at: now });
+  }
+
+  return resumeFireCook(lit, now);
 }
 
 export function isIgnition(itemId: string): boolean {
@@ -219,12 +236,12 @@ export function placeInFireplace(
   }
 
   if (target.kind === "tinder") {
-    if (slot.itemId !== "tinder") return null;
+    if (!isBurnablePaper(slot.itemId)) return null;
     let inv = removeFromSlot(next.inventory, inventoryIndex, 1);
     if (!inv) return null;
     if (fp.slots.tinder) {
       const back = placeLoot(inv, next.storageTier, [
-        { itemId: "tinder", qty: 1 },
+        { itemId: fp.slots.tinder.itemId, qty: 1 },
       ]);
       if (back.lost.length) return null;
       inv = back.inventory;
@@ -234,7 +251,10 @@ export function placeInFireplace(
       inventory: inv,
       fireplace: {
         ...fp,
-        slots: { ...fp.slots, tinder: { itemId: "tinder", qty: 1 } },
+        slots: {
+          ...fp.slots,
+          tinder: { itemId: slot.itemId, qty: 1 },
+        },
       },
     };
   }
@@ -353,8 +373,9 @@ export function takeFromFireplace(
   }
 
   if (target.kind === "tinder" && fp.slots.tinder) {
+    const item = fp.slots.tinder;
     const { inventory, lost } = placeLoot(next.inventory, next.storageTier, [
-      { itemId: "tinder", qty: 1 },
+      { itemId: item.itemId, qty: 1 },
     ]);
     if (lost.length) return null;
     return {

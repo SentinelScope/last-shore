@@ -267,6 +267,7 @@ export const LOOT_POOLS = {
     "magazine",
     "wooden_toy",
     "book",
+    "document",
     "message_bottle",
     "granola_bar",
     "wooden_matches",
@@ -321,6 +322,7 @@ export type RecipeId =
   | "fishing_stick"
   | "simple_fireplace"
   | "satchel"
+  | "tool_rack"
   | "palm_frond_mat"
   | "log_chair"
   | "lean_to"
@@ -336,17 +338,20 @@ export type Recipe = {
   name: string;
   timeMs: number;
   cost: { itemId: string; qty: number }[];
-  /** Required in inventory, not consumed. */
+  /** Required in inventory or on the tool rack, not consumed. */
   tool?: string;
   result?: { itemId: string; qty: number };
   effect?:
     | "satchel"
+    | "tool_rack"
     | "simple_fireplace"
     | "mat"
     | "log_chair"
     | "lean_to"
     | "walled"
     | "storm";
+  /** Build-page band. */
+  band?: "early" | "medium" | "late";
 };
 
 export const RECIPES: Recipe[] = [
@@ -447,6 +452,19 @@ export const RECIPES: Recipe[] = [
     ],
     result: { itemId: "satchel", qty: 1 },
     effect: "satchel",
+    band: "medium",
+  },
+  {
+    id: "tool_rack",
+    name: "Tool Rack",
+    timeMs: 15 * 60_000,
+    cost: [
+      { itemId: "wood", qty: 6 },
+      { itemId: "string", qty: 2 },
+    ],
+    tool: "wooden_hammer",
+    effect: "tool_rack",
+    band: "medium",
   },
   {
     id: "palm_frond_mat",
@@ -454,6 +472,7 @@ export const RECIPES: Recipe[] = [
     timeMs: 5 * 60_000,
     cost: [{ itemId: "plant_fiber", qty: 6 }],
     effect: "mat",
+    band: "medium",
   },
   {
     id: "log_chair",
@@ -461,6 +480,7 @@ export const RECIPES: Recipe[] = [
     timeMs: 10 * 60_000,
     cost: [{ itemId: "wood", qty: 4 }],
     effect: "log_chair",
+    band: "medium",
   },
   {
     id: "lean_to",
@@ -472,6 +492,7 @@ export const RECIPES: Recipe[] = [
     ],
     tool: "wooden_hammer",
     effect: "lean_to",
+    band: "medium",
   },
   {
     id: "walled_shelter",
@@ -484,6 +505,7 @@ export const RECIPES: Recipe[] = [
     ],
     tool: "wooden_hammer",
     effect: "walled",
+    band: "late",
   },
   {
     id: "storm_shelter",
@@ -496,6 +518,7 @@ export const RECIPES: Recipe[] = [
     ],
     tool: "stone_hammer",
     effect: "storm",
+    band: "late",
   },
   {
     id: "fibre_hat",
@@ -506,6 +529,7 @@ export const RECIPES: Recipe[] = [
       { itemId: "string", qty: 1 },
     ],
     result: { itemId: "fibre_hat", qty: 1 },
+    band: "late",
   },
   {
     id: "fibre_shirt",
@@ -516,6 +540,7 @@ export const RECIPES: Recipe[] = [
       { itemId: "string", qty: 2 },
     ],
     result: { itemId: "fibre_shirt", qty: 1 },
+    band: "late",
   },
   {
     id: "fibre_pants",
@@ -526,6 +551,7 @@ export const RECIPES: Recipe[] = [
       { itemId: "string", qty: 2 },
     ],
     result: { itemId: "fibre_pants", qty: 1 },
+    band: "late",
   },
   {
     id: "fibre_sandals",
@@ -536,6 +562,7 @@ export const RECIPES: Recipe[] = [
       { itemId: "string", qty: 1 },
     ],
     result: { itemId: "fibre_sandals", qty: 1 },
+    band: "late",
   },
 ];
 

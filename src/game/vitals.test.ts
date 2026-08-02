@@ -34,6 +34,10 @@ function bareState(inventory: SaveState["inventory"] = []): SaveState {
     worn: { head: null, body: null, legs: null, feet: null },
     shelterDecor: [null, null, null],
     pendingOverflow: null,
+    recoveredDocuments: [],
+    documentsRead: [],
+    hasToolRack: false,
+    toolRack: [null, null, null],
   };
 }
 

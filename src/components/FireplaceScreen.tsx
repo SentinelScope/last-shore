@@ -17,6 +17,7 @@ import {
   startCook,
   takeFromFireplace,
 } from "@/game/fire";
+import { isBurnablePaper } from "@/game/documents";
 import {
   isFireplaceBuiltTier,
   type FireplaceBuiltTier,
@@ -36,7 +37,7 @@ import {
 
 const SLOT_HINTS = {
   ignition: "Flint, Wooden Matches, Lighter",
-  tinder: "Tinder",
+  tinder: "Tinder, Magazine, Book, Document",
   fuel: "Wood",
   food: "Fish, Crab, Can of Food, or a Cooking Pan",
 } as const;
@@ -271,7 +272,7 @@ export function FireplaceScreen({
 
   function acceptDrop(itemId: string, target: DropKind): boolean {
     if (target.kind === "ignition") return isIgnition(itemId);
-    if (target.kind === "tinder") return itemId === "tinder";
+    if (target.kind === "tinder") return isBurnablePaper(itemId);
     if (target.kind === "fuel") return itemId === "wood";
     if (itemId === "cooking_pan") return true;
     if (target.slotIndex === 1 && !pan && itemId !== "cooking_pan") return false;

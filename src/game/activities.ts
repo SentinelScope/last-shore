@@ -14,7 +14,6 @@ import {
 import { writeActivityDiary } from "./diary";
 import { syncFireplace } from "./fire";
 import {
-  hasItem,
   mergeLoot,
   missingCosts,
   placeLoot,

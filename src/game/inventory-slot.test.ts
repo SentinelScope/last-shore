@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { destroyItem, eatItem } from "./vitals";
 import { createNewRun } from "./persist";
-import { rollActivityLoot, startActivity, resolveActivityIfDue } from "./activities";
+import { rollActivityLoot, startActivity } from "./activities";
 
 describe("destroyItem slot index", () => {
   it("destroys from the selected overflow stack, not the full stack", () => {

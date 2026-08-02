@@ -202,7 +202,7 @@ export function repairInventoryToolWithTape(
     return { ok: false, reason: "Already sound." };
   }
   // Remove tape first; index may shift if tape is before tool.
-  let inventory = state.inventory.map((s) => ({ ...s }));
+  const inventory = state.inventory.map((s) => ({ ...s }));
   const tapeSlot = inventory[tapeInventoryIndex]!;
   if (tapeSlot.qty <= 1) inventory.splice(tapeInventoryIndex, 1);
   else inventory[tapeInventoryIndex] = { ...tapeSlot, qty: tapeSlot.qty - 1 };

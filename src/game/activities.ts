@@ -24,6 +24,7 @@ import {
 import { lootFits, makeOverflow } from "./overflow";
 import type {
   ActiveActivity,
+  FireActivity,
   PendingResults,
   SaveState,
 } from "./persist";
@@ -174,8 +175,21 @@ function rollScourLoot(
   return mergeLoot(items.map((itemId) => ({ itemId, qty: 1 })));
 }
 
-function rollCutLoot(tool: CutTool, durationId: DurationId): LootPile {
-  return [{ itemId: "wood", qty: CUT_YIELD[tool][durationId] }];
+function rollCutLoot(
+  tool: CutTool,
+  durationId: DurationId,
+  seed: string,
+  startedAt: number,
+): LootPile {
+  const wood = CUT_YIELD[tool][durationId];
+  const exact = wood * 0.25;
+  const base = Math.floor(exact);
+  const frac = exact - base;
+  const rng = rngFor(seed, "cut-fibre", tickIndexAt(startedAt));
+  const fibre = base + (frac > 0 && rng() < frac ? 1 : 0);
+  const loot: LootPile = [{ itemId: "wood", qty: wood }];
+  if (fibre > 0) loot.push({ itemId: "plant_fiber", qty: fibre });
+  return loot;
 }
 
 export function rollActivityLoot(
@@ -186,7 +200,12 @@ export function rollActivityLoot(
     return rollScourLoot(seed, activity.durationId, activity.startedAt);
   }
   if (activity.kind === "cut" && activity.durationId) {
-    return rollCutLoot(activity.tool ?? "bare", activity.durationId);
+    return rollCutLoot(
+      activity.tool ?? "bare",
+      activity.durationId,
+      seed,
+      activity.startedAt,
+    );
   }
   return [];
 }
@@ -310,17 +329,21 @@ function resolveCraft(state: SaveState, now: number): SaveState {
 }
 
 function resolveCook(state: SaveState, now: number): SaveState {
-  const activity = state.activity;
+  const activity = state.fireActivity;
   if (!activity?.cookItemId || activity.cookSlotIndex === undefined) {
-    return { ...state, activity: null };
+    return { ...state, fireActivity: null };
   }
+  if (activity.pausedAt != null) return state;
 
   const synced = syncFireplace(state, now);
+  // sync may pause the cook if the fire died this tick
+  if (synced.fireActivity?.pausedAt != null) return synced;
+
   const slotIndex = activity.cookSlotIndex;
   const foodSlots = [...synced.fireplace.slots.food];
   const current = foodSlots[slotIndex];
   if (!current || current.itemId !== activity.cookItemId) {
-    return { ...synced, activity: null };
+    return { ...synced, fireActivity: null };
   }
 
   const resultId = COOK_RESULT[activity.cookItemId] ?? activity.cookItemId;
@@ -328,7 +351,7 @@ function resolveCook(state: SaveState, now: number): SaveState {
 
   const next: SaveState = {
     ...synced,
-    activity: null,
+    fireActivity: null,
     fireplace: {
       ...synced.fireplace,
       slots: { ...synced.fireplace.slots, food: foodSlots },
@@ -350,63 +373,67 @@ function resolveCook(state: SaveState, now: number): SaveState {
 }
 
 export function resolveActivityIfDue(state: SaveState, now: number): SaveState {
-  const activity = state.activity;
-  if (!activity || now < activity.endsAt) return state;
+  let s = state;
+  const activity = s.activity;
+  if (activity && now >= activity.endsAt) {
+    if (activity.kind === "craft") {
+      s = resolveCraft(s, now);
+    } else {
+      const loot = rollActivityLoot(activity, s.seed);
 
-  if (activity.kind === "craft") {
-    return resolveCraft(state, now);
+      if (!lootFits(s.inventory, s.storageTier, loot)) {
+        const next: SaveState = {
+          ...s,
+          activity: null,
+          pendingOverflow: makeOverflow(
+            ACTIVITY_LABEL[activity.kind],
+            "Found",
+            loot,
+          ),
+          pendingResults: null,
+        };
+        s = writeActivityDiary(next, {
+          kind: activity.kind,
+          durationId: activity.durationId,
+          kept: mergeLoot(loot),
+          lost: [],
+          at: now,
+        });
+      } else {
+        const { inventory, kept, lost } = placeLoot(
+          s.inventory,
+          s.storageTier,
+          loot,
+        );
+
+        const next: SaveState = {
+          ...s,
+          activity: null,
+          inventory,
+          pendingResults: {
+            title: ACTIVITY_LABEL[activity.kind],
+            kept,
+            lost,
+            resolvedAt: now,
+          },
+          pendingOverflow: null,
+        };
+        s = writeActivityDiary(next, {
+          kind: activity.kind,
+          durationId: activity.durationId,
+          kept,
+          lost,
+          at: now,
+        });
+      }
+    }
   }
-  if (activity.kind === "cook") {
-    return resolveCook(state, now);
+
+  const fire = s.fireActivity;
+  if (fire && fire.pausedAt == null && now >= fire.endsAt) {
+    s = resolveCook(s, now);
   }
-
-  const loot = rollActivityLoot(activity, state.seed);
-
-  if (!lootFits(state.inventory, state.storageTier, loot)) {
-    const next: SaveState = {
-      ...state,
-      activity: null,
-      pendingOverflow: makeOverflow(
-        ACTIVITY_LABEL[activity.kind],
-        "Found",
-        loot,
-      ),
-      pendingResults: null,
-    };
-    return writeActivityDiary(next, {
-      kind: activity.kind,
-      durationId: activity.durationId,
-      kept: mergeLoot(loot),
-      lost: [],
-      at: now,
-    });
-  }
-
-  const { inventory, kept, lost } = placeLoot(
-    state.inventory,
-    state.storageTier,
-    loot,
-  );
-
-  const next: SaveState = {
-    ...state,
-    activity: null,
-    inventory,
-    pendingResults: {
-      title: ACTIVITY_LABEL[activity.kind],
-      kept,
-      lost,
-      resolvedAt: now,
-    },
-    pendingOverflow: null,
-  };
-  return writeActivityDiary(next, {
-    kind: activity.kind,
-    durationId: activity.durationId,
-    kept,
-    lost,
-    at: now,
-  });
+  return s;
 }
 
 export function clearPendingResults(state: SaveState): SaveState {
@@ -425,15 +452,18 @@ export function formatRemaining(endsAt: number, now: number): string {
 }
 
 export function activityChipLabel(
-  activity: ActiveActivity,
+  activity: ActiveActivity | FireActivity,
   now: number,
 ): string {
   if (activity.kind === "craft" && activity.recipeId) {
     const recipe = RECIPES.find((r) => r.id === activity.recipeId);
     return `Crafting ${recipe?.name ?? "…"} · ${formatRemaining(activity.endsAt, now)}`;
   }
-  if (activity.kind === "cook" && activity.cookItemId) {
+  if (activity.kind === "cook") {
     const name = activity.cookItemId.replace(/_/g, " ");
+    if (activity.pausedAt != null) {
+      return `Cooking ${name} · paused`;
+    }
     return `Cooking ${name} · ${formatRemaining(activity.endsAt, now)}`;
   }
   return `${ACTIVITY_LABEL[activity.kind]} · ${formatRemaining(activity.endsAt, now)}`;

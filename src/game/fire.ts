@@ -8,7 +8,7 @@ import {
   IGNITION_USES,
   WEATHER_ROLL_HOURS,
 } from "./balance";
-import { placeLoot, removeItems } from "./inventory";
+import { placeLoot, removeFromSlot } from "./inventory";
 import type { InventorySlot, SaveState } from "./persist";
 import { latestWeatherRollAt } from "./time";
 import { nextWeatherRollAfter, weatherAt } from "./weather";
@@ -34,24 +34,29 @@ function stormDuring(
 /**
  * Apply fuel burn and storm extinguish from fireplace.syncedAt → now.
  * Wall-clock; safe to call on load and each tick.
+ * Extinguishing pauses an active cook without voiding the food.
  */
 export function syncFireplace(state: SaveState, now: number): SaveState {
   const fp = state.fireplace;
   if (fp.built === "none") return state;
-  if (!fp.lit) return state;
+  // Fire already out — keep any cook frozen rather than letting the clock run.
+  if (!fp.lit) return pauseFireCook(state, now);
 
   const from = fp.syncedAt || now;
   if (now <= from) return state;
 
   if (stormDuring(state.seed, state.runStartedAt, from, now)) {
-    return {
-      ...state,
-      fireplace: {
-        ...fp,
-        lit: false,
-        syncedAt: now,
+    return pauseFireCook(
+      {
+        ...state,
+        fireplace: {
+          ...fp,
+          lit: false,
+          syncedAt: now,
+        },
       },
-    };
+      now,
+    );
   }
 
   const hours = (now - from) / 3_600_000;
@@ -59,15 +64,18 @@ export function syncFireplace(state: SaveState, now: number): SaveState {
   const remaining = fp.slots.fuelWood - consumed;
 
   if (remaining <= 0) {
-    return {
-      ...state,
-      fireplace: {
-        ...fp,
-        lit: false,
-        syncedAt: now,
-        slots: { ...fp.slots, fuelWood: 0 },
+    return pauseFireCook(
+      {
+        ...state,
+        fireplace: {
+          ...fp,
+          lit: false,
+          syncedAt: now,
+          slots: { ...fp.slots, fuelWood: 0 },
+        },
       },
-    };
+      now,
+    );
   }
 
   return {
@@ -76,6 +84,29 @@ export function syncFireplace(state: SaveState, now: number): SaveState {
       ...fp,
       syncedAt: now,
       slots: { ...fp.slots, fuelWood: remaining },
+    },
+  };
+}
+
+function pauseFireCook(state: SaveState, now: number): SaveState {
+  const fa = state.fireActivity;
+  if (!fa || fa.pausedAt != null) return state;
+  return {
+    ...state,
+    fireActivity: { ...fa, pausedAt: now },
+  };
+}
+
+function resumeFireCook(state: SaveState, now: number): SaveState {
+  const fa = state.fireActivity;
+  if (!fa || fa.pausedAt == null) return state;
+  const remaining = Math.max(0, fa.endsAt - fa.pausedAt);
+  return {
+    ...state,
+    fireActivity: {
+      ...fa,
+      endsAt: now + remaining,
+      pausedAt: null,
     },
   };
 }
@@ -96,20 +127,23 @@ export function lightFire(state: SaveState, now: number): SaveState {
   const ign = fp.slots.ignition!;
   const uses = (ign.durability ?? IGNITION_USES[ign.itemId] ?? 1) - 1;
 
-  return {
-    ...next,
-    fireplace: {
-      ...fp,
-      lit: true,
-      syncedAt: now,
-      slots: {
-        ...fp.slots,
-        tinder: null,
-        ignition:
-          uses <= 0 ? null : { ...ign, qty: 1, durability: uses },
+  return resumeFireCook(
+    {
+      ...next,
+      fireplace: {
+        ...fp,
+        lit: true,
+        syncedAt: now,
+        slots: {
+          ...fp.slots,
+          tinder: null,
+          ignition:
+            uses <= 0 ? null : { ...ign, qty: 1, durability: uses },
+        },
       },
     },
-  };
+    now,
+  );
 }
 
 export function isIgnition(itemId: string): boolean {
@@ -186,7 +220,7 @@ export function placeInFireplace(
 
   if (target.kind === "tinder") {
     if (slot.itemId !== "tinder") return null;
-    let inv = removeItems(next.inventory, [{ itemId: "tinder", qty: 1 }]);
+    let inv = removeFromSlot(next.inventory, inventoryIndex, 1);
     if (!inv) return null;
     if (fp.slots.tinder) {
       const back = placeLoot(inv, next.storageTier, [
@@ -210,7 +244,7 @@ export function placeInFireplace(
     const room = FIRE_FUEL_MAX - Math.floor(fp.slots.fuelWood);
     if (room <= 0) return null;
     const take = Math.min(room, slot.qty);
-    const inv = removeItems(next.inventory, [{ itemId: "wood", qty: take }]);
+    const inv = removeFromSlot(next.inventory, inventoryIndex, take);
     if (!inv) return null;
     next = syncFireplace({ ...next, inventory: inv }, now);
     return {
@@ -396,23 +430,28 @@ export function startCook(
   now: number,
 ): SaveState | null {
   const next = syncFireplace(state, now);
-  if (next.activity) return null;
+  if (next.fireActivity) return null;
   if (!next.fireplace.lit) return null;
   const food = next.fireplace.slots.food[slotIndex];
   if (!food || !isCookable(food.itemId)) return null;
   if (food.itemId === "cooking_pan") return null;
 
   const pan = hasPanInFood(next.fireplace.slots.food);
-  const duration = cookDurationMs(food.itemId, "simple", pan);
+  const built =
+    next.fireplace.built === "stone" || next.fireplace.built === "cooking"
+      ? next.fireplace.built
+      : "simple";
+  const duration = cookDurationMs(food.itemId, built, pan);
 
   return {
     ...next,
-    activity: {
+    fireActivity: {
       kind: "cook",
       cookItemId: food.itemId,
       cookSlotIndex: slotIndex,
       startedAt: now,
       endsAt: now + duration,
+      pausedAt: null,
     },
   };
 }

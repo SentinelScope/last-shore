@@ -252,7 +252,9 @@ function placeFireFx(svg: Element, tier: FireplaceBuiltTier) {
   }
   const live = svg.querySelector("#fire-live-root");
   if (live) {
-    live.setAttribute("transform", `translate(${ash.x},${ash.y})`);
+    // Keep flame art proportional to the beach PNG scale (was authored at 100/880).
+    const fx = BEACH_FIRE_SCALE / (100 / 880);
+    live.setAttribute("transform", `translate(${ash.x},${ash.y}) scale(${fx})`);
   }
 }
 

@@ -190,19 +190,36 @@ function cutText(
   durationId: DurationId,
   haul: string,
   lost: InventorySlot[],
+  kept: InventorySlot[],
 ): string {
   const dur = durationPhrase(durationId);
-  const openings = [
-    () => `${Capital(dur)} at the palms. ${Capital(haul)}.`,
-    () => `Cut for ${dur}. ${Capital(haul)}.`,
-    () => `Worked the grove for ${dur}. Brought back ${haul}.`,
-    () => `The trunks gave ${haul} after ${dur}.`,
-    () => `Axe and patience, ${dur}. ${Capital(haul)}.`,
-    () => `Stood under the palms for ${dur}. ${Capital(haul)}.`,
-    () => `Wood duty, ${dur}. ${Capital(haul)}.`,
-    () => `Hacked until the arms shook — ${dur}. ${Capital(haul)}.`,
-    () => `${Capital(dur)} among the four trunks. ${Capital(haul)}.`,
-  ];
+  const hasFibre = kept.some((k) => k.itemId === "plant_fiber");
+  const openings = hasFibre
+    ? [
+        () =>
+          `${Capital(dur)} at the palms. Stripped husk and fibre from the felled trunks. ${Capital(haul)}.`,
+        () =>
+          `Cut for ${dur}. Husk peeled back, fibre wound off the wood. ${Capital(haul)}.`,
+        () =>
+          `Worked the grove for ${dur}. Brought back ${haul} — fibre stripped from the cut palms.`,
+        () =>
+          `The trunks gave ${haul} after ${dur}. Fibre came free with the bark.`,
+        () =>
+          `Axe and patience, ${dur}. ${Capital(haul)}, husk and fibre included.`,
+        () =>
+          `Stood under the palms for ${dur}. ${Capital(haul)}. Stripped what fibre the trunks would give.`,
+      ]
+    : [
+        () => `${Capital(dur)} at the palms. ${Capital(haul)}.`,
+        () => `Cut for ${dur}. ${Capital(haul)}.`,
+        () => `Worked the grove for ${dur}. Brought back ${haul}.`,
+        () => `The trunks gave ${haul} after ${dur}.`,
+        () => `Axe and patience, ${dur}. ${Capital(haul)}.`,
+        () => `Stood under the palms for ${dur}. ${Capital(haul)}.`,
+        () => `Wood duty, ${dur}. ${Capital(haul)}.`,
+        () => `Hacked until the arms shook — ${dur}. ${Capital(haul)}.`,
+        () => `${Capital(dur)} among the four trunks. ${Capital(haul)}.`,
+      ];
   let text = pick(rng, openings)();
   if (lost.length > 0) {
     text += ` Could not carry ${formatHaul(lost)}.`;
@@ -272,7 +289,7 @@ export function writeActivityDiary(
   if (args.kind === "scour" && args.durationId) {
     text = scourText(rng, args.durationId, haul, args.lost);
   } else if (args.kind === "cut" && args.durationId) {
-    text = cutText(rng, args.durationId, haul, args.lost);
+    text = cutText(rng, args.durationId, haul, args.lost, args.kept);
   } else if (args.kind === "craft") {
     text = craftText(rng, args.recipeName ?? "thing", args.kept, args.lost);
   } else if (args.kind === "cook" && args.cookItemId) {

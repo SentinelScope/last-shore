@@ -18,6 +18,7 @@ function bareState(inventory: SaveState["inventory"] = []): SaveState {
     storageTier: "sand",
     inventory,
     activity: null,
+    fireActivity: null,
     pendingResults: null,
     collectedTickIndex: null,
     fireplace: emptyFireplace(),

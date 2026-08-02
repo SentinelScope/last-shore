@@ -32,15 +32,23 @@ export type WornGear = {
 };
 
 export type ActiveActivity = {
-  kind: ActivityKind;
+  kind: Exclude<ActivityKind, "cook">;
   startedAt: number;
   endsAt: number;
   durationId?: DurationId;
   tool?: CutTool;
   recipeId?: RecipeId;
-  /** Item being cooked (raw id). */
-  cookItemId?: string;
-  cookSlotIndex?: number;
+};
+
+/** Unattended cook on the fire — independent of the player activity channel. */
+export type FireActivity = {
+  kind: "cook";
+  cookItemId: string;
+  cookSlotIndex: number;
+  startedAt: number;
+  endsAt: number;
+  /** Set while the fire is out; cook clock is frozen until relit. */
+  pausedAt: number | null;
 };
 
 export type PendingResults = {
@@ -94,6 +102,8 @@ export type SaveState = {
   storageTier: StorageTierId;
   inventory: InventorySlot[];
   activity: ActiveActivity | null;
+  /** Cooking on the fire — runs beside player activities. */
+  fireActivity: FireActivity | null;
   pendingResults: PendingResults | null;
   /** Incoming haul that does not fit — player must choose. */
   pendingOverflow: PendingOverflow | null;
@@ -164,7 +174,52 @@ function migrate(raw: SaveState): SaveState {
       raw.inventory && raw.inventory.length > 0
         ? raw.inventory
         : STARTING_INVENTORY.map((s) => ({ ...s })),
-    activity: raw.activity ?? null,
+    activity: (() => {
+      const a = raw.activity as
+        | {
+            kind: string;
+            startedAt: number;
+            endsAt: number;
+            durationId?: DurationId;
+            tool?: CutTool;
+            recipeId?: RecipeId;
+            cookItemId?: string;
+            cookSlotIndex?: number;
+          }
+        | null
+        | undefined;
+      if (!a || a.kind === "cook") return null;
+      return a as ActiveActivity;
+    })(),
+    fireActivity: (() => {
+      if (raw.fireActivity) {
+        return {
+          ...raw.fireActivity,
+          pausedAt: raw.fireActivity.pausedAt ?? null,
+        };
+      }
+      const a = raw.activity as
+        | {
+            kind: string;
+            cookItemId?: string;
+            cookSlotIndex?: number;
+            startedAt: number;
+            endsAt: number;
+          }
+        | null
+        | undefined;
+      if (a?.kind === "cook" && a.cookItemId) {
+        return {
+          kind: "cook" as const,
+          cookItemId: a.cookItemId,
+          cookSlotIndex: a.cookSlotIndex ?? 0,
+          startedAt: a.startedAt,
+          endsAt: a.endsAt,
+          pausedAt: null,
+        };
+      }
+      return null;
+    })(),
     pendingResults: raw.pendingResults ?? null,
     pendingOverflow: raw.pendingOverflow ?? null,
     collectedTickIndex: raw.collectedTickIndex ?? null,
@@ -240,6 +295,7 @@ export function createNewRun(now = Date.now()): SaveState {
     storageTier: "sand",
     inventory: STARTING_INVENTORY.map((s) => ({ ...s })),
     activity: null,
+    fireActivity: null,
     pendingResults: null,
     pendingOverflow: null,
     collectedTickIndex: null,

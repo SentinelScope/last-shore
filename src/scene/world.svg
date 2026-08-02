@@ -239,9 +239,9 @@
   <!-- PNG only — stones/logs/ash. Glow + flames live above the global tint. -->
   <g class="firepit">
     <image id="fireplace-a" class="fireplace-struct" href="/structures/fireplace_simple.png"
-           x="75.636" y="622" width="116.364" height="116.364" opacity="1" preserveAspectRatio="xMidYMax meet"/>
+           x="87.455" y="642" width="93.091" height="93.091" opacity="1" preserveAspectRatio="xMidYMax meet"/>
     <image id="fireplace-b" class="fireplace-struct" href="/structures/fireplace_simple.png"
-           x="75.636" y="622" width="116.364" height="116.364" opacity="0" preserveAspectRatio="xMidYMax meet"/>
+           x="87.455" y="642" width="93.091" height="93.091" opacity="0" preserveAspectRatio="xMidYMax meet"/>
   </g>
 
   <!-- ================= PALMS ================= -->
@@ -366,8 +366,8 @@
   <!-- ================= FIRE EMISSIVE (above tint) ================= -->
   <!-- Glow, flames, embers, smoke stay bright at night; origins move with tier. -->
   <g class="fire-fx" pointer-events="none">
-    <ellipse id="firelight" class="firelight" cx="133.886" cy="708.636" rx="130" ry="64" fill="url(#g-fire)" opacity="var(--glow-op)"/>
-    <g id="fire-live-root" class="fire-live" transform="translate(133.886,708.636)">
+    <ellipse id="firelight" class="firelight" cx="133.909" cy="711.273" rx="104" ry="51" fill="url(#g-fire)" opacity="var(--glow-op)"/>
+    <g id="fire-live-root" class="fire-live" transform="translate(133.909,711.273)">
       <path class="flame" d="M0 0c-9-6-11-16-5-25 1 6 4 10 8 12 3-9 2-17-4-24 13 6 21 17 21 28 0 8-6 13-14 15z"
             fill="#E4763F" opacity="var(--fire-op)"/>
       <path class="flame-in" d="M2 -2c-5-4-6-11-3-16 1 4 3 7 6 8 1-5 0-10-2-14 8 5 12 11 12 18 0 5-4 8-9 9z"

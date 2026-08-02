@@ -93,6 +93,26 @@ export function removeItems(
   return next.filter((s) => s.qty > 0);
 }
 
+/**
+ * Remove qty from a specific inventory slot. Never scans other stacks of the
+ * same item — overflow / duplicate stacks stay untouched.
+ */
+export function removeFromSlot(
+  inventory: InventorySlot[],
+  index: number,
+  qty: number,
+): InventorySlot[] | null {
+  const slot = inventory[index];
+  if (!slot) return null;
+  const take = Math.min(Math.max(1, Math.floor(qty)), slot.qty);
+  if (take <= 0) return null;
+  const next = inventory.map((s) => ({ ...s }));
+  const cur = next[index]!;
+  if (cur.qty <= take) next.splice(index, 1);
+  else next[index] = { ...cur, qty: cur.qty - take };
+  return next;
+}
+
 export function missingCosts(
   inventory: InventorySlot[],
   costs: { itemId: string; qty: number }[],

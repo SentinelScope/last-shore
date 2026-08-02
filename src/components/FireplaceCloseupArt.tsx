@@ -2,6 +2,7 @@
 
 import {
   FIREPLACE_SRC,
+  PAGE_FIRE_FX_SCALE,
   PAGE_FIRE_SCALE,
   PAGE_FIRE_SIZE,
   fireplaceAshAt,
@@ -13,7 +14,7 @@ const PAGE_FEET = {
   x: PAGE_FIRE_SIZE / 2,
   y: (PAGE_FIRE_SIZE * 880) / 1024,
 };
-const FX_SCALE = 6;
+const FX_SCALE = PAGE_FIRE_FX_SCALE;
 
 type Props = {
   tier: FireplaceBuiltTier;

@@ -27,17 +27,22 @@ export const FIREPLACE_CENTRE_X = 512;
 
 /**
  * Shared beach scale — cooking reads tallest because its art fills more of the
- * canvas above the ground line. ~116 SVG units across.
+ * canvas above the ground line. ~93 SVG units across (20% under the prior 100).
  */
-export const BEACH_FIRE_SCALE = 100 / FIREPLACE_GROUND_Y;
+export const BEACH_FIRE_SCALE = 80 / FIREPLACE_GROUND_Y;
 export const BEACH_FIRE_SIZE = FIREPLACE_PNG * BEACH_FIRE_SCALE;
 
 /** Sand contact under the old stone ring. */
 export const BEACH_FIRE_FEET = { x: 134, y: 722 };
 
-/** Fireplace page ≈ 6× beach scale. */
-export const PAGE_FIRE_SCALE = BEACH_FIRE_SCALE * 6;
+/**
+ * Fireplace page ≈ 6× beach, then trimmed ~15% so the closeup fits and the
+ * ash-bed anchors stay readable.
+ */
+export const PAGE_FIRE_SCALE = BEACH_FIRE_SCALE * 6 * 0.85;
 export const PAGE_FIRE_SIZE = FIREPLACE_PNG * PAGE_FIRE_SCALE;
+/** Flame / ember / smoke scale relative to beach SVG units. */
+export const PAGE_FIRE_FX_SCALE = PAGE_FIRE_SCALE / BEACH_FIRE_SCALE;
 
 export function fireplaceImageRect(
   feet: { x: number; y: number },

@@ -109,8 +109,8 @@ describe("light and cook", () => {
     };
     const cooking = startCook(state, 0, t0);
     expect(cooking).not.toBeNull();
-    expect(cooking!.activity?.kind).toBe("cook");
-    const done = resolveActivityIfDue(cooking!, cooking!.activity!.endsAt);
+    expect(cooking!.fireActivity?.kind).toBe("cook");
+    const done = resolveActivityIfDue(cooking!, cooking!.fireActivity!.endsAt);
     expect(done.fireplace.slots.food[0]?.itemId).toBe("cooked_crab");
   });
 });

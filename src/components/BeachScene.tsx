@@ -789,7 +789,7 @@ export function BeachScene() {
   } else if (live && save && openHotspot && busy && save.activity) {
     captionTitle = openHotspot.title;
     captionBody = `You're already ${ACTIVITY_LABEL[save.activity.kind].toLowerCase()}.`;
-    if (save.activity.kind !== "craft" && save.activity.kind !== "cook") {
+    if (save.activity.kind !== "craft") {
       captionBody =
         spotActivity && save.activity.kind === spotActivity
           ? `${ACTIVITY_LABEL[save.activity.kind]} — ${formatRemaining(save.activity.endsAt, now)} left.`
@@ -868,6 +868,11 @@ export function BeachScene() {
               {save.activity && (
                 <div className="activity-chip">
                   {activityChipLabel(save.activity, now)}
+                </div>
+              )}
+              {save.fireActivity && (
+                <div className="activity-chip">
+                  {activityChipLabel(save.fireActivity, now)}
                 </div>
               )}
             </div>

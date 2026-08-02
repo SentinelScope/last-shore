@@ -29,7 +29,7 @@ import {
   maybeWriteWaterFullDiary,
 } from "./diary";
 import { syncFireplace } from "./fire";
-import { removeItems } from "./inventory";
+import { removeFromSlot } from "./inventory";
 import {
   ITEMS,
   isCarriedComfortItem,
@@ -583,9 +583,7 @@ export function eatItem(
   if (!slot) return null;
   const effect = EAT_EFFECT[slot.itemId];
   if (!effect) return null;
-  const inventory = removeItems(state.inventory, [
-    { itemId: slot.itemId, qty: 1 },
-  ]);
+  const inventory = removeFromSlot(state.inventory, inventoryIndex, 1);
   if (!inventory) return null;
   return {
     ...state,
@@ -603,9 +601,7 @@ export function destroyItem(
   const slot = state.inventory[inventoryIndex];
   if (!slot) return null;
   const take = Math.min(Math.max(1, qty), slot.qty);
-  const inventory = removeItems(state.inventory, [
-    { itemId: slot.itemId, qty: take },
-  ]);
+  const inventory = removeFromSlot(state.inventory, inventoryIndex, take);
   if (!inventory) return null;
   return { ...state, inventory };
 }

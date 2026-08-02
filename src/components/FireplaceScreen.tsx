@@ -309,7 +309,7 @@ export function FireplaceScreen({
   const flameGlow = 0.25 + holdProgress * 0.75;
 
   const cooking =
-    save.activity?.kind === "cook" ? save.activity : null;
+    save.fireActivity?.kind === "cook" ? save.fireActivity : null;
 
   return (
     <div className="fireplace-page" onClick={(e) => e.stopPropagation()}>
@@ -485,7 +485,7 @@ export function FireplaceScreen({
                   food &&
                   isCookable(food.itemId) &&
                   food.itemId !== "cooking_pan" &&
-                  !save.activity;
+                  !save.fireActivity;
                 return (
                   <div key={i} className={i > 0 ? "fp-food-extra" : undefined}>
                     <FireplaceSlot

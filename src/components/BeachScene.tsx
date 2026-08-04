@@ -850,7 +850,7 @@ export function BeachScene() {
   return (
     <PointerDragProvider>
     <div
-      className="phone"
+      className="phone app-root"
       ref={phoneRef}
       onClick={onPhonePointer}
       aria-busy={!live && !ending ? true : undefined}

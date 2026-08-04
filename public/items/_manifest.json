@@ -30,12 +30,12 @@
   "granola_bar",
   "handkerchief",
   "hat",
+  "lab04_s4_a51",
   "large_fish",
   "lean_to",
   "lighter",
   "log_chair",
   "looking_glass",
-  "lab04_s4_a51",
   "magazine",
   "medicine_bottle",
   "medium_fish",
@@ -56,6 +56,7 @@
   "shirt",
   "simple_fireplace",
   "small_fish",
+  "small_fish_cooked",
   "sneakers",
   "soda",
   "stone",
@@ -95,19 +96,6 @@
   "fish_large": "large_fish",
   "palm-frond-mat": "palm_frond_mat",
   "leanto": "lean_to",
-  "stormproof_shelter": "storm_shelter",
-  "document_1": "document",
-  "document_2": "document",
-  "document_3": "document",
-  "document_4": "document",
-  "document_5": "document",
-  "document_6": "document",
-  "document_7": "document",
-  "document_8": "document",
-  "document_9": "document",
-  "cooked_crab": "crab",
-  "cooked_small_fish": "small_fish",
-  "cooked_medium_fish": "medium_fish",
-  "cooked_large_fish": "large_fish"
-}
+  "stormproof_shelter": "storm_shelter"
+ }
 }

@@ -96,9 +96,23 @@ export const HOTSPOT_IDLE_MS = 10_000;
 
 /* ---------- activities ---------- */
 
-export type ActivityKind = "scour" | "cut" | "craft" | "cook";
+export type ActivityKind = "scour" | "cut" | "craft" | "cook" | "fish";
 export type DurationId = "5m" | "20m" | "1h";
 export type CutTool = "bare" | "stone_axe" | "metal_axe";
+
+/** Fishing tools — priority when picking the default: rod > stone spear > stick > wooden spear. */
+export type FishingToolId =
+  | "fishing_rod"
+  | "stone_spear"
+  | "fishing_stick"
+  | "wooden_spear";
+
+export const FISHING_TOOLS_PRIORITY: readonly FishingToolId[] = [
+  "fishing_rod",
+  "stone_spear",
+  "fishing_stick",
+  "wooden_spear",
+] as const;
 
 /** Test clock only — shipping values are [5, 20, 60]. */
 export const ACTIVITY_DURATIONS_MINUTES = [1, 5, 10] as const;
@@ -126,12 +140,14 @@ export const ACTIVITY_LABEL: Record<ActivityKind, string> = {
   cut: "Cutting trees",
   craft: "Crafting",
   cook: "Cooking",
+  fish: "Fishing",
 };
 
 /** Hotspot → activity, if any (milestone 3a). */
 export const HOTSPOT_ACTIVITY: Partial<Record<string, ActivityKind>> = {
   shore: "scour",
   palm: "cut",
+  shallows: "fish",
 };
 
 export type ScourLootId =
@@ -186,6 +202,73 @@ export const CUT_YIELD: Record<CutTool, Record<DurationId, number>> = {
   bare: { "5m": 1, "20m": 4, "1h": 9 },
   stone_axe: { "5m": 2, "20m": 8, "1h": 18 },
   metal_axe: { "5m": 3, "20m": 12, "1h": 27 },
+};
+
+/* ---------- fishing ---------- */
+
+/** Max catches per session (roll 0..max inclusive). */
+export const FISH_CATCH_MAX: Record<FishingToolId, Record<DurationId, number>> =
+  {
+    fishing_stick: { "5m": 1, "20m": 2, "1h": 3 },
+    fishing_rod: { "5m": 1, "20m": 3, "1h": 4 },
+    wooden_spear: { "5m": 1, "20m": 2, "1h": 3 },
+    stone_spear: { "5m": 1, "20m": 3, "1h": 4 },
+  };
+
+/** Chance a line catch is junk instead of a fish (spears: 0). */
+export const FISH_JUNK_RATE: Record<FishingToolId, number> = {
+  fishing_stick: 1 / 5,
+  fishing_rod: 1 / 12,
+  wooden_spear: 0,
+  stone_spear: 0,
+};
+
+/** Spears only — share of non-junk catches that are crab. */
+export const FISH_CRAB_RATE: Record<FishingToolId, number> = {
+  fishing_stick: 0,
+  fishing_rod: 0,
+  wooden_spear: 0.2,
+  stone_spear: 0.2,
+};
+
+export type FishSizeId = "small_fish" | "medium_fish" | "large_fish";
+
+/** Per-catch size weights: small / medium / large. */
+export const FISH_SIZE_WEIGHTS: Record<
+  "line" | "rod",
+  Record<DurationId, Record<FishSizeId, number>>
+> = {
+  line: {
+    "5m": { small_fish: 70, medium_fish: 25, large_fish: 5 },
+    "20m": { small_fish: 55, medium_fish: 33, large_fish: 12 },
+    "1h": { small_fish: 40, medium_fish: 40, large_fish: 20 },
+  },
+  rod: {
+    "5m": { small_fish: 55, medium_fish: 33, large_fish: 12 },
+    "20m": { small_fish: 40, medium_fish: 40, large_fish: 20 },
+    "1h": { small_fish: 25, medium_fish: 40, large_fish: 35 },
+  },
+};
+
+export type FishJunkId = "boot" | "empty_can" | "gear" | "glowing_rod";
+
+/** Line junk tables — rod includes rare finds; stick redistributes those 20%. */
+export const FISH_JUNK_WEIGHTS: Record<
+  "fishing_stick" | "fishing_rod",
+  Record<FishJunkId, number>
+> = {
+  fishing_stick: {
+    boot: 50,
+    empty_can: 50,
+    gear: 0,
+    glowing_rod: 0,
+  },
+  fishing_rod: {
+    boot: 40,
+    empty_can: 40,
+    gear: 15,
+    glowing_rod: 5,
+  },
 };
 
 /* ---------- weather conditional (full rows, each totals 100) ---------- */
@@ -707,8 +790,8 @@ export type AilmentId =
   | "lightning"
   | "freak_wave";
 
-/** Activity kinds that can roll ailments (includes future fishing). */
-export type AilmentActivity = ActivityKind | "fish";
+/** Activity kinds that can roll ailments. */
+export type AilmentActivity = ActivityKind;
 
 /**
  * Single editable table: chance % per minute of outdoor activity by weather.

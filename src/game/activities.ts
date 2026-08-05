@@ -3,11 +3,19 @@ import {
   ACTIVITY_LABEL,
   COOK_RESULT,
   CUT_YIELD,
+  FISH_CATCH_MAX,
+  FISH_CRAB_RATE,
+  FISH_JUNK_RATE,
+  FISH_JUNK_WEIGHTS,
+  FISH_SIZE_WEIGHTS,
   RECIPES,
   SCOUR_TABLE,
   type ActivityKind,
   type CutTool,
   type DurationId,
+  type FishJunkId,
+  type FishingToolId,
+  type FishSizeId,
   type RecipeId,
   type ScourLootId,
 } from "./balance";
@@ -29,9 +37,15 @@ import type {
 } from "./persist";
 import { rngFor, weightedPick } from "./rng";
 import { tickIndexAt } from "./time";
-import { bestCutTool, hasTool, withToolDurability } from "./tools";
+import {
+  bestCutTool,
+  bestFishingTool,
+  hasTool,
+  wearToolUse,
+  withToolDurability,
+} from "./tools";
 
-export { bestCutTool } from "./tools";
+export { bestCutTool, bestFishingTool } from "./tools";
 
 export function canStartActivity(
   state: SaveState,
@@ -48,19 +62,38 @@ export function canStartActivity(
       return { ok: false, reason: "Needs a stone in your inventory." };
     }
   }
+  if (kind === "fish") {
+    if (!bestFishingTool(state)) {
+      return {
+        ok: false,
+        reason: "Needs a fishing stick, rod, or spear.",
+      };
+    }
+  }
   return { ok: true };
 }
 
 export function startActivity(
   state: SaveState,
-  kind: "scour" | "cut",
+  kind: "scour" | "cut" | "fish",
   durationId: DurationId,
   now: number,
+  opts?: { fishTool?: FishingToolId },
 ): SaveState {
   const gate = canStartActivity(state, kind);
   if (!gate.ok) return state;
 
-  const tool = kind === "cut" ? bestCutTool(state)! : undefined;
+  let tool: ActiveActivity["tool"];
+  if (kind === "cut") {
+    tool = bestCutTool(state)!;
+  } else if (kind === "fish") {
+    const pick = opts?.fishTool ?? bestFishingTool(state);
+    if (!pick || !hasTool(state, pick)) {
+      return state;
+    }
+    tool = pick;
+  }
+
   const duration = ACTIVITY_DURATIONS[durationId];
   const activity: ActiveActivity = {
     kind,
@@ -190,6 +223,43 @@ function rollCutLoot(
   return loot;
 }
 
+function isLineTool(tool: FishingToolId): tool is "fishing_stick" | "fishing_rod" {
+  return tool === "fishing_stick" || tool === "fishing_rod";
+}
+
+function rollFishLoot(
+  tool: FishingToolId,
+  durationId: DurationId,
+  seed: string,
+  startedAt: number,
+): LootPile {
+  const rng = rngFor(seed, "fish", tickIndexAt(startedAt));
+  const max = FISH_CATCH_MAX[tool][durationId];
+  const count = Math.floor(rng() * (max + 1)); // 0..max inclusive
+  const ids: string[] = [];
+  const sizeBand = tool === "fishing_rod" ? "rod" : "line";
+  const sizeWeights = FISH_SIZE_WEIGHTS[sizeBand][durationId];
+  const junkRate = FISH_JUNK_RATE[tool];
+  const crabRate = FISH_CRAB_RATE[tool];
+
+  for (let i = 0; i < count; i++) {
+    if (isLineTool(tool) && junkRate > 0 && rng() < junkRate) {
+      const junkTable = FISH_JUNK_WEIGHTS[tool];
+      const filtered = Object.fromEntries(
+        Object.entries(junkTable).filter(([, w]) => w > 0),
+      ) as Record<FishJunkId, number>;
+      ids.push(weightedPick(rng, filtered));
+      continue;
+    }
+    if (crabRate > 0 && rng() < crabRate) {
+      ids.push("crab");
+      continue;
+    }
+    ids.push(weightedPick(rng, sizeWeights as Record<FishSizeId, number>));
+  }
+  return mergeLoot(ids.map((itemId) => ({ itemId, qty: 1 })));
+}
+
 export function rollActivityLoot(
   activity: ActiveActivity,
   seed: string,
@@ -199,7 +269,15 @@ export function rollActivityLoot(
   }
   if (activity.kind === "cut" && activity.durationId) {
     return rollCutLoot(
-      activity.tool ?? "bare",
+      (activity.tool as CutTool) ?? "bare",
+      activity.durationId,
+      seed,
+      activity.startedAt,
+    );
+  }
+  if (activity.kind === "fish" && activity.durationId && activity.tool) {
+    return rollFishLoot(
+      activity.tool as FishingToolId,
       activity.durationId,
       seed,
       activity.startedAt,
@@ -398,6 +476,12 @@ export function resolveActivityIfDue(state: SaveState, now: number): SaveState {
       s = resolveCraft(s, now);
     } else {
       const loot = rollActivityLoot(activity, s.seed);
+      let toolBroke = false;
+      if (activity.kind === "fish" && activity.tool) {
+        const worn = wearToolUse(s, activity.tool);
+        s = worn.state;
+        toolBroke = worn.broke;
+      }
 
       if (!lootFits(s.inventory, s.storageTier, loot)) {
         const next: SaveState = {
@@ -413,6 +497,8 @@ export function resolveActivityIfDue(state: SaveState, now: number): SaveState {
         s = writeActivityDiary(next, {
           kind: activity.kind,
           durationId: activity.durationId,
+          toolId: activity.kind === "fish" ? activity.tool : undefined,
+          toolBroke,
           kept: mergeLoot(loot),
           lost: [],
           at: now,
@@ -439,6 +525,8 @@ export function resolveActivityIfDue(state: SaveState, now: number): SaveState {
         s = writeActivityDiary(next, {
           kind: activity.kind,
           durationId: activity.durationId,
+          toolId: activity.kind === "fish" ? activity.tool : undefined,
+          toolBroke,
           kept,
           lost,
           at: now,

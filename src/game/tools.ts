@@ -2,7 +2,8 @@
  * Tools — durability, rack eligibility, and inventory∪rack availability.
  */
 
-import type { CutTool } from "./balance";
+import type { CutTool, FishingToolId } from "./balance";
+import { FISHING_TOOLS_PRIORITY } from "./balance";
 import { freeInventorySlots } from "./clothing";
 import { hasItem, placeLoot, removeFromSlot } from "./inventory";
 import type { InventorySlot, SaveState } from "./persist";
@@ -61,6 +62,68 @@ export function bestCutTool(state: SaveState): CutTool | null {
   if (hasTool(state, "stone_axe")) return "stone_axe";
   if (hasItem(state.inventory, "stone")) return "bare";
   return null;
+}
+
+export function ownedFishingTools(state: SaveState): FishingToolId[] {
+  return FISHING_TOOLS_PRIORITY.filter((id) => hasTool(state, id));
+}
+
+export function bestFishingTool(state: SaveState): FishingToolId | null {
+  return ownedFishingTools(state)[0] ?? null;
+}
+
+export function fishingToolLabel(id: FishingToolId): string {
+  switch (id) {
+    case "fishing_rod":
+      return "Fishing Rod";
+    case "stone_spear":
+      return "Stone Spear";
+    case "fishing_stick":
+      return "Fishing Stick";
+    case "wooden_spear":
+      return "Wooden Spear";
+  }
+}
+
+/**
+ * Spend one use of a tool in inventory or on the rack.
+ * Tools without a max (stick, hammers) are untouched. At 0 uses the tool is removed.
+ */
+export function wearToolUse(
+  state: SaveState,
+  itemId: string,
+): { state: SaveState; broke: boolean } {
+  const max = toolMaxUses(itemId);
+  if (max == null) return { state, broke: false };
+
+  const invIdx = state.inventory.findIndex((s) => s.itemId === itemId);
+  if (invIdx >= 0) {
+    const slot = state.inventory[invIdx]!;
+    const current = slot.durability ?? max;
+    const next = current - 1;
+    if (next <= 0) {
+      const inventory = removeFromSlot(state.inventory, invIdx, 1);
+      if (!inventory) return { state, broke: false };
+      return { state: { ...state, inventory }, broke: true };
+    }
+    const inventory = state.inventory.map((s, i) =>
+      i === invIdx ? { ...s, durability: next } : s,
+    );
+    return { state: { ...state, inventory }, broke: false };
+  }
+
+  const rack = [...(state.toolRack ?? emptyToolRack())];
+  const rackIdx = rack.findIndex((s) => s?.itemId === itemId);
+  if (rackIdx < 0) return { state, broke: false };
+  const tool = rack[rackIdx]!;
+  const current = tool.durability ?? max;
+  const next = current - 1;
+  if (next <= 0) {
+    rack[rackIdx] = null;
+    return { state: { ...state, toolRack: rack }, broke: true };
+  }
+  rack[rackIdx] = { ...tool, durability: next };
+  return { state: { ...state, toolRack: rack }, broke: false };
 }
 
 export function withToolDurability(slot: InventorySlot): InventorySlot {

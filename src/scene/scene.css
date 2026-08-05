@@ -236,6 +236,7 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 /* tops: under the SVG object, mapped through world-host (phone minus dock) */
 .s-horizon{left:66%;top:33%}
 .s-shore{left:52%;top:56%}
+.s-shallows{left:43%;top:calc((100% - var(--dock-clearance)) * 620 / 844)}
 .s-fire{left:34.4%;top:calc((100% - var(--dock-clearance)) * 735 / 844)}
 .s-water{left:17.9%;top:calc((100% - var(--dock-clearance)) * 778 / 844)}
 .s-tool-rack{left:50.8%;top:calc((100% - var(--dock-clearance)) * 748 / 844)}
@@ -262,6 +263,12 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .stamp .activity-chip + .activity-chip{margin-top:4px}
 
 .picker-wx{font-size:10px;letter-spacing:.18em;text-transform:uppercase;opacity:.55;margin-bottom:6px}
+.picker-tool{
+  background:none;border:0;padding:0;margin:0;color:inherit;font:inherit;cursor:pointer;
+  text-align:left;text-decoration:underline;text-decoration-color:rgba(237,231,221,.35);
+  text-underline-offset:3px
+}
+.picker-tool:hover,.picker-tool:focus-visible{text-decoration-color:rgba(255,178,92,.8);outline:none}
 .durations{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
 .durations .dur{
   flex:1;min-width:72px;padding:10px 8px;font-family:inherit;font-size:11px;letter-spacing:.12em;

@@ -1,6 +1,7 @@
 export type HotspotId =
   | "shore"
   | "palm"
+  | "shallows"
   | "water"
   | "fire"
   | "hut"
@@ -29,6 +30,14 @@ export const HOTSPOTS: HotspotDef[] = [
     title: "Palm grove",
     description: "Four trunks standing. Wood lives in them.",
     action: "Cut",
+  },
+  {
+    id: "shallows",
+    className: "s-shallows",
+    title: "The shallows",
+    description:
+      "You could stand here all day. You would need a line or a spear.",
+    action: "Fish",
   },
   {
     id: "fire",

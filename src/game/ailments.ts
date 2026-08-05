@@ -303,15 +303,15 @@ export type AilmentView = {
 export function buildAilmentViews(state: SaveState): AilmentView[] {
   return (state.ailments ?? []).map((a) => {
     const row = AILMENT_TABLE[a.id];
-    let impactLine = "No immediate hit.";
+    let impactLine = "";
     if (a.id === "cut_finger") {
-      impactLine = `Opened for ${row.impact.health ?? -5}% health.`;
+      impactLine = `Cut finger ${row.impact.health ?? -5}% health.`;
     } else if (a.id === "heatstroke") {
-      impactLine = `Hit thirst for ${row.impact.thirst ?? -10}%.`;
+      impactLine = `Increased thirst by ${row.impact.thirst ?? -10}%.`;
     } else if (a.id === "twisted_ankle") {
-      impactLine = "Twisted underfoot. No immediate hit.";
+      impactLine = "Twisted an ankle.";
     } else if (a.id === "cold") {
-      impactLine = "Settled in with the wet. No immediate hit.";
+      impactLine = "Caught a cold.";
     }
 
     let activeLine = "No ongoing effect.";

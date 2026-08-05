@@ -63,7 +63,7 @@ const CASTAWAY_SRC: Record<PoseId, string> = {
 const CASTAWAY_FEET: Record<PoseId, { x: number; y: number }> = {
   stare: { x: 197, y: 653 },
   lean: { x: 66, y: 693 },
-  fish: { x: 234, y: 516 },
+  fish: { x: 168, y: 620 },
   fire: { x: 172, y: 717 },
   hut: { x: 272, y: 697 },
   bed: { x: 280, y: 694 },

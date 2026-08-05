@@ -4,6 +4,7 @@ import {
   type ActivityKind,
   type CutTool,
   type DurationId,
+  type FishingToolId,
   type RecipeId,
   type StorageTierId,
   type ShelterTierId,
@@ -37,7 +38,8 @@ export type ActiveActivity = {
   startedAt: number;
   endsAt: number;
   durationId?: DurationId;
-  tool?: CutTool;
+  /** Cut tool or fishing tool, depending on kind. */
+  tool?: CutTool | FishingToolId;
   recipeId?: RecipeId;
 };
 

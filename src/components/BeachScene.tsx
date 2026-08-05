@@ -24,6 +24,7 @@ import {
   storageSlotCount,
   type ActivityKind,
   type DurationId,
+  type FishingToolId,
   type RecipeId,
 } from "@/game/balance";
 import { beachContainerAt, containerTitle } from "@/game/containers";
@@ -42,6 +43,11 @@ import {
 } from "@/game/persist";
 import { poseFor } from "@/game/pose";
 import { STORAGE_TIER_NAME } from "@/game/storageArt";
+import {
+  bestFishingTool,
+  fishingToolLabel,
+  ownedFishingTools,
+} from "@/game/tools";
 import {
   isWaterVesselId,
   waterSpotCaption,
@@ -136,7 +142,8 @@ const GrainOverlay = memo(function GrainOverlay() {
 function deriveSceneProps(save: SaveState, now: number): WorldSceneProps {
   const dayPart = dayPartAt(now);
   const weather = weatherAt(save.seed, save.runStartedAt, now);
-  const pose = poseFor(dayPart, weather);
+  const fishing = save.activity?.kind === "fish";
+  const pose = fishing ? "fish" : poseFor(dayPart, weather);
   const hasWater = !!save.waterSpot.itemId;
   const waterLevel = hasWater
     ? Math.round(currentWaterFill(save, now) / 5) * 5
@@ -157,7 +164,8 @@ function deriveSceneProps(save: SaveState, now: number): WorldSceneProps {
     hasWater,
     waterItemId: save.waterSpot.itemId,
     waterLevel,
-    figureVisible: !save.activity,
+    // Fishing is the one activity you can watch at the waterline.
+    figureVisible: !save.activity || fishing,
   };
 }
 
@@ -186,6 +194,9 @@ export function BeachScene() {
   const [revealed, setRevealed] = useState(false);
   const [openSpot, setOpenSpot] = useState<HotspotId | null>(null);
   const [pickerKind, setPickerKind] = useState<ActivityKind | null>(null);
+  const [pickerFishTool, setPickerFishTool] = useState<FishingToolId | null>(
+    null,
+  );
   const [itemsOpen, setItemsOpen] = useState(false);
   const [craftOpen, setCraftOpen] = useState(false);
   const [diaryOpen, setDiaryOpen] = useState(false);
@@ -196,8 +207,9 @@ export function BeachScene() {
   const [toolRackOpen, setToolRackOpen] = useState(false);
   const [ending, setEnding] = useState<DeathInfo | null>(null);
   const [omenConfirm, setOmenConfirm] = useState<{
-    kind: "scour" | "cut";
+    kind: "scour" | "cut" | "fish";
     durationId: DurationId;
+    fishTool?: FishingToolId;
   } | null>(null);
   const [bestDays, setBestDays] = useState(0);
   const [audioMuted, setAudioMuted] = useState(false);
@@ -320,6 +332,7 @@ export function BeachScene() {
     setRevealed(false);
     setOpenSpot(null);
     setPickerKind(null);
+    setPickerFishTool(null);
   }, []);
 
   const reveal = useCallback(() => {
@@ -489,6 +502,12 @@ export function BeachScene() {
     if (busy && save.activity) return;
 
     const gate = canStartActivity(save, spotActivity);
+    if (spotActivity === "fish") {
+      const tool = bestFishingTool(save);
+      setPickerFishTool(tool);
+    } else {
+      setPickerFishTool(null);
+    }
     if (!gate.ok) {
       setPickerKind(spotActivity);
       return;
@@ -500,15 +519,24 @@ export function BeachScene() {
     if (!save || !pickerKind || pickerKind === "craft" || pickerKind === "cook")
       return;
     const kind = pickerKind;
+    if (kind !== "scour" && kind !== "cut" && kind !== "fish") return;
     const weather = weatherAt(save.seed, save.runStartedAt, Date.now());
     if (weather === "omen") {
-      setOmenConfirm({ kind, durationId });
+      setOmenConfirm({
+        kind,
+        durationId,
+        fishTool: kind === "fish" ? pickerFishTool ?? undefined : undefined,
+      });
       setPickerKind(null);
+      setPickerFishTool(null);
       return;
     }
-    const next = startActivity(save, kind, durationId, Date.now());
+    const next = startActivity(save, kind, durationId, Date.now(), {
+      fishTool: kind === "fish" ? pickerFishTool ?? undefined : undefined,
+    });
     commitSave(next);
     setPickerKind(null);
+    setPickerFishTool(null);
     setOpenSpot(null);
     reveal();
   }
@@ -520,6 +548,7 @@ export function BeachScene() {
       omenConfirm.kind,
       omenConfirm.durationId,
       Date.now(),
+      { fishTool: omenConfirm.fishTool },
     );
     commitSave(next);
     setOmenConfirm(null);
@@ -808,6 +837,26 @@ export function BeachScene() {
     captionBody = "Tap again to open your items.";
     captionAction = "Open";
     showAction = true;
+  } else if (live && save && openHotspot?.id === "shallows") {
+    captionTitle = "The shallows";
+    const hasFishTool = !!bestFishingTool(save);
+    captionBody = hasFishTool
+      ? "Close enough to the drop-off. Something is down there."
+      : "You could stand here all day. You would need a line or a spear.";
+    if (busy && save.activity) {
+      captionBody =
+        save.activity.kind === "fish"
+          ? `Fishing — ${formatRemaining(save.activity.endsAt, now)} left.`
+          : `You're already ${ACTIVITY_LABEL[save.activity.kind].toLowerCase()}.`;
+      showAction = false;
+      captionAction = null;
+    } else if (!hasFishTool) {
+      showAction = false;
+      captionAction = null;
+    } else {
+      captionAction = "Fish";
+      showAction = true;
+    }
   } else if (live && save && openHotspot && busy && save.activity) {
     captionTitle = openHotspot.title;
     captionBody = `You're already ${ACTIVITY_LABEL[save.activity.kind].toLowerCase()}.`;
@@ -981,8 +1030,29 @@ export function BeachScene() {
               }
               weather={view.weather}
               blockedReason={pickerBlocked}
+              toolLabel={
+                pickerKind === "fish" && pickerFishTool
+                  ? fishingToolLabel(pickerFishTool)
+                  : null
+              }
+              onCycleTool={
+                pickerKind === "fish" &&
+                save &&
+                ownedFishingTools(save).length > 1
+                  ? () => {
+                      const owned = ownedFishingTools(save);
+                      const cur = pickerFishTool ?? owned[0]!;
+                      const idx = owned.indexOf(cur);
+                      const next = owned[(idx + 1) % owned.length]!;
+                      setPickerFishTool(next);
+                    }
+                  : null
+              }
               onPick={onPickDuration}
-              onClose={() => setPickerKind(null)}
+              onClose={() => {
+                setPickerKind(null);
+                setPickerFishTool(null);
+              }}
             />
 
             <nav className="dock" aria-label="Dock">

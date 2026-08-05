@@ -271,6 +271,81 @@ function cookText(
   return pick(rng, openings)();
 }
 
+function fishToolPhrase(toolId: string): string {
+  return (ITEMS[toolId]?.name ?? toolId.replace(/_/g, " ")).toLowerCase();
+}
+
+function fishBreakLine(toolId: string): string {
+  const name = fishToolPhrase(toolId);
+  if (toolId === "wooden_spear") {
+    return " The wooden spear finally gave out. It had one more fish in it than I expected.";
+  }
+  if (toolId === "stone_spear") {
+    return " The stone spear split on the way home.";
+  }
+  if (toolId === "fishing_rod") {
+    return " The rod gave out on the walk back. Eighty casts was generous.";
+  }
+  return ` The ${name} finally gave out.`;
+}
+
+function fishText(
+  rng: () => number,
+  durationId: DurationId,
+  toolId: string,
+  kept: InventorySlot[],
+  lost: InventorySlot[],
+  toolBroke: boolean,
+): string {
+  const dur = durationPhrase(durationId);
+  const tool = fishToolPhrase(toolId);
+  const empty = kept.length === 0 && lost.length === 0;
+  const haul = formatHaul([...kept, ...lost]);
+
+  const emptyOpenings = [
+    () => `Nothing. Stood there ${dur} and the sea kept it all.`,
+    () => `${Capital(dur)} in the shallows with the ${tool}. Empty hands.`,
+    () => `Took the ${tool} out. ${Capital(dur)} of waiting — nothing bit.`,
+    () => `The drop-off gave nothing. ${Capital(dur)} wasted, or nearly.`,
+    () => `Cast and waited for ${dur}. The sea owed me nothing today.`,
+    () => `Quiet water for ${dur}. Came back with nothing.`,
+    () => `${Capital(dur)} on the line. Not a pull worth keeping.`,
+    () => `Stood in the shallows ${dur}. Left empty.`,
+  ];
+
+  const haulOpenings = [
+    () =>
+      `${Capital(dur)} on the line. ${Capital(haul)}.`,
+    () =>
+      `Took the ${tool} out to the shallows. ${Capital(haul)}.`,
+    () =>
+      `Worked the drop-off for ${dur} with the ${tool}. ${Capital(haul)}.`,
+    () =>
+      `${Capital(dur)} in the wet. ${Capital(haul)}.`,
+    () =>
+      `Fished with the ${tool} for ${dur}. Came back with ${haul}.`,
+    () =>
+      `The shallows answered after ${dur}: ${haul}.`,
+    () =>
+      `Patience and the ${tool}, ${dur}. ${Capital(haul)}.`,
+    () =>
+      `Out to where the sand falls away. ${Capital(dur)}. ${Capital(haul)}.`,
+    () =>
+      `Stood in the cool for ${dur}. ${Capital(haul)}.`,
+  ];
+
+  let text = empty
+    ? pick(rng, emptyOpenings)()
+    : pick(rng, haulOpenings)();
+  if (lost.length > 0) {
+    text += ` Left ${formatHaul(lost)} behind — nowhere to put it.`;
+  }
+  if (toolBroke) {
+    text += fishBreakLine(toolId);
+  }
+  return text;
+}
+
 export function writeActivityDiary(
   state: SaveState,
   args: {
@@ -278,6 +353,8 @@ export function writeActivityDiary(
     durationId?: DurationId;
     recipeName?: string;
     cookItemId?: string;
+    toolId?: string;
+    toolBroke?: boolean;
     kept: InventorySlot[];
     lost: InventorySlot[];
     at: number;
@@ -291,6 +368,15 @@ export function writeActivityDiary(
     text = scourText(rng, args.durationId, haul, args.lost);
   } else if (args.kind === "cut" && args.durationId) {
     text = cutText(rng, args.durationId, haul, args.lost, args.kept);
+  } else if (args.kind === "fish" && args.durationId && args.toolId) {
+    text = fishText(
+      rng,
+      args.durationId,
+      args.toolId,
+      args.kept,
+      args.lost,
+      !!args.toolBroke,
+    );
   } else if (args.kind === "craft") {
     text = craftText(rng, args.recipeName ?? "thing", args.kept, args.lost);
   } else if (args.kind === "cook" && args.cookItemId) {

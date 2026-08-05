@@ -14,6 +14,10 @@ type Props = {
   kind: ActivityKind | null;
   weather: WeatherId;
   blockedReason?: string | null;
+  /** e.g. "Stone Spear" — shown as "Fishing — Stone Spear". */
+  toolLabel?: string | null;
+  /** When set, the tool name is tappable to cycle owned fishing tools. */
+  onCycleTool?: (() => void) | null;
   onPick: (durationId: DurationId) => void;
   onClose: () => void;
 };
@@ -23,17 +27,36 @@ export function DurationPicker({
   kind,
   weather,
   blockedReason,
+  toolLabel,
+  onCycleTool,
   onPick,
   onClose,
 }: Props) {
   if (!kind) return null;
+
+  const title = toolLabel
+    ? `${ACTIVITY_LABEL[kind]} — ${toolLabel}`
+    : ACTIVITY_LABEL[kind];
 
   return (
     <div
       className={`caption picker${open ? " on" : ""}`}
       onClick={(e) => e.stopPropagation()}
     >
-      <h2>{ACTIVITY_LABEL[kind]}</h2>
+      <h2>
+        {toolLabel && onCycleTool ? (
+          <button
+            type="button"
+            className="picker-tool"
+            onClick={onCycleTool}
+            title="Tap to switch tool"
+          >
+            {title}
+          </button>
+        ) : (
+          title
+        )}
+      </h2>
       <p className="picker-wx">
         Weather · {WEATHER_LABEL[weather]}
       </p>

@@ -30,7 +30,8 @@
 
   </defs>
 
-  <!-- ================= SKY ================= -->
+  <!-- ================= SKY (vector — replaced by day-part PNG) ================= -->
+  <g class="shore-vector-bg" aria-hidden="true">
   <rect width="390" height="310" fill="url(#g-sky)"/>
   <g class="stars" fill="#EAF0F5">
     <circle cx="44" cy="52" r="1.1"/><circle cx="118" cy="28" r=".9"/><circle cx="188" cy="70" r=".8"/>
@@ -44,6 +45,7 @@
     <circle cx="288" cy="126" r="19" fill="#FFEBC8" opacity="var(--sunglow-op)"/>
     <g opacity="var(--star-op)"><circle cx="288" cy="118" r="15" fill="#DDE6EE"/>
       <circle cx="281" cy="112" r="3" fill="#C2CEDA" opacity=".6"/><circle cx="293" cy="124" r="2.2" fill="#C2CEDA" opacity=".5"/></g>
+  </g>
   </g>
 
   <!-- faceted cloud banks -->
@@ -82,7 +84,8 @@
     </g>
   </g>
 
-  <!-- ================= SEA ================= -->
+  <!-- ================= SEA / STONES / SAND (vector — replaced by day-part PNG) ================= -->
+  <g class="shore-vector-bg" aria-hidden="true">
   <rect y="300" width="390" height="232" fill="var(--sea-far)"/>
   <g clip-path="url(#clip-sea)">
     <polygon points="-10,340 130,332 250,344 400,334 400,400 -10,404" fill="var(--sea-mid)"/>
@@ -122,12 +125,14 @@
   <!-- ================= SHORE ================= -->
   <path d="M-10 486q70 22 150 16t120 12 140 -14v70H-10z" fill="var(--foam)" opacity=".85"/>
   <path d="M-10 492q70 22 150 16t120 12 140 -14v66H-10z" fill="var(--sand-shad)" opacity=".55"/>
+  </g>
   <g class="splash" fill="var(--foam)" opacity=".5">
     <ellipse cx="90" cy="520" rx="10" ry="2"><animate attributeName="rx" values="2;12;2" dur="1.4s" repeatCount="indefinite"/><animate attributeName="opacity" values=".6;0" dur="1.4s" repeatCount="indefinite"/></ellipse>
     <ellipse cx="250" cy="536" rx="9" ry="2"><animate attributeName="rx" values="2;11;2" dur="1.1s" begin=".4s" repeatCount="indefinite"/><animate attributeName="opacity" values=".55;0" dur="1.1s" begin=".4s" repeatCount="indefinite"/></ellipse>
     <ellipse cx="330" cy="512" rx="8" ry="2"><animate attributeName="rx" values="2;10;2" dur="1.6s" begin=".8s" repeatCount="indefinite"/><animate attributeName="opacity" values=".5;0" dur="1.6s" begin=".8s" repeatCount="indefinite"/></ellipse>
   </g>
 
+  <g class="shore-vector-bg" aria-hidden="true">
   <!-- ================= BEACH ================= -->
   <path d="M-10 514q80 26 170 20t230 -18v340H-10z" fill="var(--sand-mid)"/>
   <polygon points="-10,560 130,548 280,566 400,548 400,640 -10,656" fill="var(--sand-lit)"/>
@@ -139,6 +144,7 @@
     <polygon points="30,700 62,700 178,844 88,844"/>
     <polygon points="100,662 124,662 214,806 154,824"/>
     <polygon points="348,592 364,592 400,700 380,712"/>
+  </g>
   </g>
 
   <!-- ================= MID-GROUND PROPS ================= -->

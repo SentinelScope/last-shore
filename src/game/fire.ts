@@ -171,6 +171,17 @@ export function isCookable(itemId: string): boolean {
   return itemId in COOK_BASE_MS;
 }
 
+/** Inventory items that belong on the fireplace strip (ignition / tinder / fuel / food). */
+export function isFireplaceUsable(itemId: string): boolean {
+  return (
+    isIgnition(itemId) ||
+    isBurnablePaper(itemId) ||
+    itemId === "wood" ||
+    isCookable(itemId) ||
+    itemId === "cooking_pan"
+  );
+}
+
 export function cookDurationMs(
   itemId: string,
   fireplaceTier: "simple" | "stone" | "cooking",

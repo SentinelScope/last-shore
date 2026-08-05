@@ -1,6 +1,6 @@
 /**
  * Fireplace PNG placement — shared by beach SVG and the fireplace page.
- * Sources are 1024×1024, ground at y=880, horizontal centre x=512.
+ * Sources are 1024×1024, ground at y≈880, horizontal centre x=512.
  */
 
 export type FireplaceBuiltTier = "simple" | "stone" | "cooking";
@@ -11,14 +11,20 @@ export const FIREPLACE_SRC: Record<FireplaceBuiltTier, string> = {
   cooking: "/structures/fireplace_cooking.png",
 };
 
-/** Ash-bed centres in source-canvas coordinates (flame / ember / smoke origin). */
+/**
+ * Flame / ember origin in source-canvas coordinates.
+ * Pit centres sit near x≈498; ash.x is nudged left so the asymmetric
+ * flame path (leans right of its transform origin) reads centred over
+ * the wood / grate. ash.y sits a bit above the fuel so the animated
+ * flame clears the structure rather than sitting inside it.
+ */
 export const FIREPLACE_ASH: Record<
   FireplaceBuiltTier,
   { x: number; y: number }
 > = {
-  simple: { x: 511, y: 762 },
-  stone: { x: 542, y: 625 },
-  cooking: { x: 504, y: 454 },
+  simple: { x: 488, y: 485 },
+  stone: { x: 490, y: 445 },
+  cooking: { x: 492, y: 350 },
 };
 
 export const FIREPLACE_PNG = 1024;
@@ -32,7 +38,7 @@ export const FIREPLACE_CENTRE_X = 512;
 export const BEACH_FIRE_SCALE = 80 / FIREPLACE_GROUND_Y;
 export const BEACH_FIRE_SIZE = FIREPLACE_PNG * BEACH_FIRE_SCALE;
 
-/** Sand contact under the old stone ring. */
+/** Sand contact under the stone ring / pit base. */
 export const BEACH_FIRE_FEET = { x: 134, y: 722 };
 
 /**
@@ -56,7 +62,7 @@ export function fireplaceImageRect(
   };
 }
 
-/** Scene / page coordinates of the ash bed for the active tier. */
+/** Scene / page coordinates of the flame origin for the active tier. */
 export function fireplaceAshAt(
   feet: { x: number; y: number },
   scale: number,

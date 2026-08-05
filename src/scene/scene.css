@@ -95,9 +95,22 @@
   --dock-clearance:calc(72px + env(safe-area-inset-bottom, 0px));
 }
 .world-host{
-  position:absolute;inset:0 0 var(--dock-clearance) 0;z-index:0;pointer-events:none
+  position:absolute;inset:0 0 var(--dock-clearance) 0;z-index:0;pointer-events:none;
+  background:#0E1218
 }
+/* Day-part shore PNGs — lowest layer; crop like SVG xMidYMax (keep beach, trim sky). */
+.shore-bg{position:absolute;inset:0;z-index:0;overflow:hidden}
+.shore-bg-img{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;object-position:center bottom;
+  opacity:0;transition:opacity 1.25s ease;
+  pointer-events:none;user-select:none;-webkit-user-drag:none
+}
+.shore-bg-img.on{opacity:1}
+.world-svg-host{position:absolute;inset:0;z-index:1}
 .world-host svg.scene{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+/* Hide old vector sky / sea / sand / stones — PNG is the shore now. */
+.world .shore-vector-bg{display:none!important}
 @media(min-width:430px) and (min-height:900px){
   .phone{
     position:relative;
@@ -494,6 +507,7 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .fireplace-page{
   position:absolute;inset:0;z-index:40;
   display:flex;flex-direction:column;
+  overflow-x:hidden;
   background:
     radial-gradient(ellipse 80% 55% at 50% 42%,rgba(90,40,18,.55),transparent 70%),
     linear-gradient(180deg,#1a1410 0%,#0c0a09 55%,#080706 100%);
@@ -510,7 +524,7 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
   background:none;border:0;color:rgba(232,220,200,.7);font-size:13px;padding:8px
 }
 .fireplace-stage{
-  flex:1;position:relative;min-height:0;
+  flex:1;position:relative;min-height:0;overflow:hidden;
   display:flex;align-items:center;justify-content:center
 }
 .fireplace-closeup{
@@ -657,17 +671,25 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
   text-align:center;font-size:12px;opacity:.55;padding:0 24px 10px;flex:none
 }
 .fp-strip{
-  flex:none;display:flex;gap:8px;overflow-x:auto;
+  flex:none;display:flex;gap:8px;
+  max-width:100%;
+  overflow-x:auto;overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-x:contain;
+  scrollbar-width:none;
+  touch-action:pan-x;
   padding:10px 14px calc(env(safe-area-inset-bottom) + 16px);
   border-top:1px solid rgba(255,178,92,.15);
   background:rgba(0,0,0,.35)
 }
+.fp-strip::-webkit-scrollbar{display:none;width:0;height:0}
 .fp-strip .slot{
   flex:0 0 56px;width:56px;height:56px;border-radius:10px;
   border:1px solid rgba(255,178,92,.25);background:rgba(20,16,12,.8);
   display:flex;align-items:center;justify-content:center;position:relative;
   padding:0;
-  touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none
+  /* pan-x lets the strip scroll; vertical lift still starts a pointer drag */
+  touch-action:pan-x;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none
 }
 .fp-strip .slot img{width:40px;height:40px;object-fit:contain;pointer-events:none}
 .fp-strip .slot .qty{
@@ -963,11 +985,28 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
   column-gap:10px;row-gap:6px;
   flex:none;width:min(100%,360px);margin:12px auto 8px;padding:0 12px;
 }
-.you-figure{
+.you-figure-stage{
   grid-column:2;grid-row:1;
+  position:relative;justify-self:center;
+  /* Room on the right for a head-height ailment column clear of shoulders. */
+  padding-right:28px;
+}
+.you-figure{
   display:block;width:auto;max-width:min(240px,58vw);height:320px;max-height:42vh;
   object-fit:contain;object-position:58% 50%;
-  pointer-events:none;user-select:none;justify-self:center;
+  pointer-events:none;user-select:none;
+}
+/* Active ailments — column by the head in the right gutter, clear of shoulders.
+   ~25% smaller than worn gear icons (30px → 22px). */
+.you-ailment-icons{
+  position:absolute;top:4%;right:0;
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  margin:0;padding:0;list-style:none;z-index:2;pointer-events:none
+}
+.you-ailment-icons li{margin:0;padding:0;line-height:0}
+.you-ailment-icons img{
+  width:22px;height:22px;object-fit:contain;display:block;
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,.65))
 }
 .you-slots{
   grid-column:3;grid-row:1;

@@ -49,6 +49,16 @@ import {
 } from "@/game/toolRackArt";
 import { WORLD_SVG } from "@/scene/worldMarkup";
 
+/** Day-part shore plates — sky, sea, sand, stones. */
+const SHORE_BG_SRC: Record<DayPart, string> = {
+  dawn: "/backgrounds/bg_dawn.png",
+  day: "/backgrounds/bg_day.png",
+  golden: "/backgrounds/bg_golden.png",
+  night: "/backgrounds/bg_night.png",
+};
+
+const DAY_PARTS: DayPart[] = ["dawn", "day", "golden", "night"];
+
 /** PNG ground line y=880, centre x=512 → standing figure ≈80 SVG units tall. */
 const CASTAWAY_SIZE = (1024 * 80) / 880;
 const CASTAWAY_SRC: Record<PoseId, string> = {
@@ -486,5 +496,21 @@ export const WorldScene = memo(function WorldScene(props: WorldSceneProps) {
     props.figureVisible,
   ]);
 
-  return <div className="world-host" ref={setHost} />;
+  return (
+    <div className="world-host">
+      <div className="shore-bg" aria-hidden="true">
+        {DAY_PARTS.map((part) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={part}
+            className={`shore-bg-img${props.dayPart === part ? " on" : ""}`}
+            src={SHORE_BG_SRC[part]}
+            alt=""
+            draggable={false}
+          />
+        ))}
+      </div>
+      <div className="world-svg-host" ref={setHost} />
+    </div>
+  );
 }, scenePropsEqual);

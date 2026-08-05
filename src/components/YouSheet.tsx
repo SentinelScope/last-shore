@@ -48,33 +48,46 @@ const BAR_META = [
     key: "thirst" as const,
     label: "Water",
     kind: "w",
-    icon: "cup",
+    icon: "/stats/water.png",
   },
   {
     key: "hunger" as const,
     label: "Food",
     kind: "f",
-    icon: "coconut",
+    icon: "/stats/food.png",
   },
   {
     key: "health" as const,
     label: "Health",
     kind: "h",
-    icon: "bandage",
+    icon: "/stats/health.png",
   },
   {
     key: "comfort" as const,
     label: "Comfort",
     kind: "c",
-    icon: "handkerchief",
+    icon: "/stats/comfort.png",
   },
 ];
 
+/** You-page status icons — only rendered while the matching ailment is active. */
+const AILMENT_ICON_SRC: Record<
+  "cut_finger" | "twisted_ankle" | "heatstroke" | "cold",
+  string
+> = {
+  cut_finger: "/ailments/cut_finger.png",
+  twisted_ankle: "/ailments/twisted_foot.png",
+  heatstroke: "/ailments/heatstroke.png",
+  cold: "/ailments/cold.png",
+};
+
 function YouFigure({
   save,
+  ailments,
   onUnequip,
 }: {
   save: SaveState;
+  ailments: ReturnType<typeof buildAilmentViews>;
   onUnequip?: (slot: ClothingSlotId) => string | null;
 }) {
   const worn = save.worn ?? {
@@ -87,14 +100,31 @@ function YouFigure({
 
   return (
     <div className="you-figure-wrap">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        className="you-figure"
-        src="/character/character_front.png"
-        alt="You, front view"
-        width={1024}
-        height={1024}
-      />
+      <div className="you-figure-stage">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          className="you-figure"
+          src="/character/character_front.png"
+          alt="You, front view"
+          width={1024}
+          height={1024}
+        />
+        {ailments.length > 0 ? (
+          <ul className="you-ailment-icons" aria-label="Active ailments">
+            {ailments.map((a) => (
+              <li key={a.id} title={a.label}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={AILMENT_ICON_SRC[a.id]}
+                  alt={a.label}
+                  width={22}
+                  height={22}
+                />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
 
       <div className="you-slots" aria-label="Worn clothing">
         {CLOTHING_SLOTS.map((slot) => {
@@ -158,7 +188,7 @@ export function YouSheet({
           <p className="cap">What is draining you, and what is holding you</p>
         </div>
 
-        <YouFigure save={save} onUnequip={onUnequip} />
+        <YouFigure save={save} ailments={ailments} onUnequip={onUnequip} />
 
         <div className="you-bars">
           {BAR_META.map((b) => {
@@ -171,7 +201,7 @@ export function YouSheet({
                 data-filled={filled ? "" : undefined}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={itemArtSrc(b.icon)} alt="" />
+                <img src={b.icon} alt="" />
                 <div className="you-bar-track">
                   <div
                     className="you-bar-fill"

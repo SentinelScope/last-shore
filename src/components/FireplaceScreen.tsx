@@ -11,6 +11,7 @@ import {
   canLight,
   hasPanInFood,
   isCookable,
+  isFireplaceUsable,
   isIgnition,
   lightFire,
   placeInFireplace,
@@ -393,7 +394,7 @@ export function FireplaceScreen({
               style={{
                 left: ashCss.left,
                 top: ashCss.top,
-                transform: "translate(calc(-50% - 96px), calc(-50% - 120px))",
+                transform: "translate(calc(-50% - 132px), calc(-50% - 152px))",
               }}
             >
               <span className="fp-slot-label">Ignition</span>
@@ -419,7 +420,7 @@ export function FireplaceScreen({
               style={{
                 left: ashCss.left,
                 top: ashCss.top,
-                transform: "translate(calc(-50% + 96px), calc(-50% - 120px))",
+                transform: "translate(calc(-50% + 132px), calc(-50% - 152px))",
               }}
             >
               <span className="fp-slot-label">Tinder</span>
@@ -445,7 +446,7 @@ export function FireplaceScreen({
               style={{
                 left: ashCss.left,
                 top: ashCss.top,
-                transform: "translate(calc(-50% - 96px), calc(-50% + 100px))",
+                transform: "translate(calc(-50% - 132px), calc(-50% + 118px))",
               }}
             >
               <span className="fp-slot-label">Fuel</span>
@@ -476,7 +477,7 @@ export function FireplaceScreen({
               style={{
                 left: ashCss.left,
                 top: ashCss.top,
-                transform: "translate(calc(-50% + 96px), calc(-50% + 100px))",
+                transform: "translate(calc(-50% + 132px), calc(-50% + 118px))",
               }}
             >
               <span className="fp-slot-label">Food</span>
@@ -537,7 +538,7 @@ export function FireplaceScreen({
       <div className="fp-strip">
         {save.inventory.map((slot, i) => {
           const def = ITEMS[slot.itemId];
-          if (!def) return null;
+          if (!def || !isFireplaceUsable(slot.itemId)) return null;
           const uses =
             slot.durability ??
             (isIgnition(slot.itemId) ? IGNITION_USES[slot.itemId] : undefined);
@@ -550,6 +551,7 @@ export function FireplaceScreen({
           const bind = bindDraggable({
             sourceKey: `fp-inv-${i}-${slot.itemId}`,
             payload,
+            touchAction: "pan-x",
           });
           return (
             <button

@@ -56,6 +56,8 @@ type Session = {
   sourceKey: string;
   onTap?: () => void;
   captureEl: HTMLElement;
+  /** When true, horizontal pans are left to a scroll parent (strip). */
+  allowPanX: boolean;
 };
 
 type DragContextValue = {
@@ -67,6 +69,8 @@ type DragContextValue = {
     payload: PointerDragPayload;
     disabled?: boolean;
     onTap?: () => void;
+    /** Defaults to "none". Use "pan-x" on horizontal inventory strips. */
+    touchAction?: string;
   }) => {
     onPointerDown: (e: ReactPointerEvent) => void;
     className: string;
@@ -195,8 +199,22 @@ export function PointerDragProvider({ children }: { children: ReactNode }) {
       const dx = e.clientX - session.startX;
       const dy = e.clientY - session.startY;
       if (!session.live) {
-        if (dx * dx + dy * dy < MOVE_THRESHOLD_PX * MOVE_THRESHOLD_PX) return;
+        const dist2 = dx * dx + dy * dy;
+        if (dist2 < MOVE_THRESHOLD_PX * MOVE_THRESHOLD_PX) return;
+
+        // Horizontal strip: let the browser keep scrolling; abandon the drag.
+        if (session.allowPanX && Math.abs(dx) >= Math.abs(dy)) {
+          detachWindow.current();
+          sessionRef.current = null;
+          return;
+        }
+
         session.live = true;
+        try {
+          session.captureEl.setPointerCapture(e.pointerId);
+        } catch {
+          /* ignore */
+        }
         setActiveSourceKey(session.sourceKey);
         setGhost({
           artSrc: session.payload.artSrc,
@@ -207,6 +225,7 @@ export function PointerDragProvider({ children }: { children: ReactNode }) {
         });
       }
 
+      e.preventDefault();
       ghostPosRef.current = { x: e.clientX, y: e.clientY };
       setGhost({
         artSrc: session.payload.artSrc,
@@ -286,6 +305,7 @@ export function PointerDragProvider({ children }: { children: ReactNode }) {
       payload: PointerDragPayload;
       disabled?: boolean;
       onTap?: () => void;
+      touchAction?: string;
     }) => {
       return {
         "data-draggable": "1" as const,
@@ -293,7 +313,7 @@ export function PointerDragProvider({ children }: { children: ReactNode }) {
           activeSourceKey === opts.sourceKey ? " is-lifted" : ""
         }`,
         style: {
-          touchAction: "none",
+          touchAction: opts.touchAction ?? "none",
           userSelect: "none",
           WebkitUserSelect: "none",
           WebkitTouchCallout: "none",
@@ -303,10 +323,16 @@ export function PointerDragProvider({ children }: { children: ReactNode }) {
           if (e.button !== 0 && e.pointerType === "mouse") return;
           if (sessionRef.current) return;
 
-          e.preventDefault();
-          e.stopPropagation();
+          const allowPanX = (opts.touchAction ?? "none").includes("pan-x");
+          // Defer preventDefault / capture when a parent strip may scroll.
+          if (!allowPanX) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
           const el = e.currentTarget as HTMLElement;
-          el.setPointerCapture(e.pointerId);
+          if (!allowPanX) {
+            el.setPointerCapture(e.pointerId);
+          }
 
           const suppressClick = (ev: Event) => {
             ev.preventDefault();
@@ -324,10 +350,13 @@ export function PointerDragProvider({ children }: { children: ReactNode }) {
             sourceKey: opts.sourceKey,
             onTap: opts.onTap,
             captureEl: el,
+            allowPanX,
           };
           ghostPosRef.current = { x: e.clientX, y: e.clientY };
 
-          window.addEventListener("pointermove", onPointerMove);
+          window.addEventListener("pointermove", onPointerMove, {
+            passive: false,
+          });
           window.addEventListener("pointerup", onPointerUp);
           window.addEventListener("pointercancel", onPointerCancel);
         },

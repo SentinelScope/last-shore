@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { canLight, lightFire, startCook, syncFireplace } from "./fire";
+import {
+  canLight,
+  isFireplaceUsable,
+  lightFire,
+  startCook,
+  syncFireplace,
+} from "./fire";
 import { resolveActivityIfDue } from "./activities";
 import { createNewRun, emptyFireplace } from "./persist";
 
@@ -13,6 +19,22 @@ vi.mock("./weather", async (importOriginal) => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe("isFireplaceUsable", () => {
+  it("keeps ignition, tinder, fuel, and food — drops everything else", () => {
+    expect(isFireplaceUsable("flint")).toBe(true);
+    expect(isFireplaceUsable("wooden_matches")).toBe(true);
+    expect(isFireplaceUsable("tinder")).toBe(true);
+    expect(isFireplaceUsable("magazine")).toBe(true);
+    expect(isFireplaceUsable("document_3")).toBe(true);
+    expect(isFireplaceUsable("wood")).toBe(true);
+    expect(isFireplaceUsable("small_fish")).toBe(true);
+    expect(isFireplaceUsable("cooking_pan")).toBe(true);
+    expect(isFireplaceUsable("stone")).toBe(false);
+    expect(isFireplaceUsable("rope")).toBe(false);
+    expect(isFireplaceUsable("cooked_small_fish")).toBe(false);
+  });
 });
 
 describe("fireplace fuel", () => {

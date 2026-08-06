@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  canStartActivity,
+  formatRemaining,
+} from "@/game/activities";
 import {
   EAT_EFFECT,
   STORAGE_TIERS,
   storageSlotCount,
+  storageUpgradeByRecipeId,
+  storageUpgradeFrom,
   WATER_CAPACITY,
   type StorageTierId,
 } from "@/game/balance";
@@ -15,13 +21,9 @@ import {
   SECRET_PHOTO_ID,
   type DocumentNumber,
 } from "@/game/documents";
-import {
-  ITEMS,
-  itemActions,
-  itemArtSrc,
-} from "@/game/items";
-import { isWaterContainer } from "@/game/inventory";
-import type { InventorySlot } from "@/game/persist";
+import { countItem, isWaterContainer, missingCosts } from "@/game/inventory";
+import { ITEMS, itemActions, itemArtSrc } from "@/game/items";
+import type { ActiveActivity, InventorySlot, SaveState } from "@/game/persist";
 import { isRackableTool } from "@/game/tools";
 import { DocumentViewer } from "./DocumentViewer";
 import { SecretLookViewer } from "./SecretLookViewer";
@@ -31,6 +33,8 @@ type Props = {
   open: boolean;
   inventory: InventorySlot[];
   storageTier: StorageTierId;
+  activity: ActiveActivity | null;
+  now: number;
   recoveredDocuments?: number[];
   onDocumentRead?: (n: DocumentNumber) => void;
   onClose: () => void;
@@ -38,12 +42,52 @@ type Props = {
   onEat?: (inventoryIndex: number) => void;
   onDestroy?: (inventoryIndex: number, qty: number) => void;
   onWear?: (inventoryIndex: number) => string | null;
+  onStorageUpgrade?: () => string | null;
 };
+
+function formatUpgradeTime(ms: number): string {
+  const m = Math.round(ms / 60_000);
+  return m === 1 ? "1 min" : `${m} min`;
+}
+
+function UpgradeCostLine({
+  inventory,
+  cost,
+  timeMs,
+}: {
+  inventory: InventorySlot[];
+  cost: { itemId: string; qty: number }[];
+  timeMs: number;
+}) {
+  const parts: ReactNode[] = [];
+  cost.forEach((c, i) => {
+    if (i > 0) parts.push(" · ");
+    const have = countItem(inventory, c.itemId);
+    const name = ITEMS[c.itemId]?.name ?? c.itemId.replace(/_/g, " ");
+    if (have < c.qty) {
+      parts.push(
+        <span key={c.itemId} className="short">
+          {name} {have}/{c.qty}
+        </span>,
+      );
+    } else {
+      parts.push(
+        <span key={c.itemId}>
+          {c.qty} {name}
+        </span>,
+      );
+    }
+  });
+  parts.push(` · ${formatUpgradeTime(timeMs)}`);
+  return <>{parts}</>;
+}
 
 export function ItemsSheet({
   open,
   inventory,
   storageTier,
+  activity,
+  now,
   recoveredDocuments = [],
   onDocumentRead,
   onClose,
@@ -51,17 +95,23 @@ export function ItemsSheet({
   onEat,
   onDestroy,
   onWear,
+  onStorageUpgrade,
 }: Props) {
   const { bindDraggable } = usePointerDrag();
   const [selected, setSelected] = useState<number | null>(null);
   const [destroyQty, setDestroyQty] = useState(1);
   const [confirmDestroy, setConfirmDestroy] = useState(false);
   const [actionReason, setActionReason] = useState<string | null>(null);
+  const [upgradeReason, setUpgradeReason] = useState<string | null>(null);
   const [reading, setReading] = useState<DocumentNumber | null>(null);
   const [looking, setLooking] = useState(false);
   const slots = storageSlotCount(storageTier);
   const used = inventory.length;
   const free = Math.max(0, slots - used);
+  const upgrade = storageUpgradeFrom(storageTier);
+  const lockedCount = upgrade
+    ? Math.max(0, storageSlotCount(upgrade.to) - slots)
+    : 0;
   const label = STORAGE_TIERS[storageTier].label;
   const selectedSlot = selected !== null ? inventory[selected] : null;
   const selectedDef = selectedSlot ? ITEMS[selectedSlot.itemId] : null;
@@ -72,11 +122,21 @@ export function ItemsSheet({
     .filter((n) => n >= 1 && n <= DOCUMENT_COUNT)
     .sort((a, b) => a - b) as DocumentNumber[];
 
+  const runningUpgrade =
+    activity?.kind === "craft" && activity.recipeId
+      ? storageUpgradeByRecipeId(activity.recipeId)
+      : null;
+  const ready = upgrade
+    ? missingCosts(inventory, upgrade.cost).length === 0
+    : false;
+  const busyGate = canStartActivity({ activity } as SaveState, "craft");
+
   useEffect(() => {
     if (!open) {
       setSelected(null);
       setConfirmDestroy(false);
       setActionReason(null);
+      setUpgradeReason(null);
       setReading(null);
       setLooking(false);
     }
@@ -91,6 +151,17 @@ export function ItemsSheet({
   function openDocument(n: DocumentNumber) {
     onDocumentRead?.(n);
     setReading(n);
+  }
+
+  function handleUpgrade() {
+    if (!onStorageUpgrade) return;
+    if (!busyGate.ok) {
+      setUpgradeReason(busyGate.reason);
+      return;
+    }
+    const reason = onStorageUpgrade();
+    if (reason) setUpgradeReason(reason);
+    else setUpgradeReason(null);
   }
 
   function handleAction(action: string) {
@@ -151,6 +222,54 @@ export function ItemsSheet({
             <div className="cap">
               {used} of {slots} slots · {label}
             </div>
+          </div>
+
+          <div className="storage-upgrade">
+            {runningUpgrade && activity ? (
+              <p className="storage-upgrade-timer">
+                Building the {runningUpgrade.name.toLowerCase()} —{" "}
+                {formatRemaining(activity.endsAt, now)} left
+              </p>
+            ) : !upgrade ? (
+              <p className="storage-upgrade-max">
+                Storage Box — 20 slots. Nothing bigger washes up here.
+              </p>
+            ) : (
+              <div className="storage-upgrade-row">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={itemArtSrc(upgrade.iconId)}
+                  alt=""
+                  className="storage-upgrade-icon"
+                />
+                <div className="storage-upgrade-copy">
+                  <strong>
+                    {upgrade.name.toUpperCase()} — {upgrade.slots} slots
+                  </strong>
+                  <span>
+                    <UpgradeCostLine
+                      inventory={inventory}
+                      cost={upgrade.cost}
+                      timeMs={upgrade.timeMs}
+                    />
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="storage-upgrade-go"
+                  disabled={!ready}
+                  onClick={handleUpgrade}
+                >
+                  {ready ? "Upgrade" : "Not enough"}
+                </button>
+              </div>
+            )}
+            {!runningUpgrade &&
+              (upgradeReason || (!busyGate.ok && ready)) && (
+                <p className="storage-upgrade-reason">
+                  {upgradeReason ?? busyGate.reason}
+                </p>
+              )}
           </div>
 
           <div className="grid">
@@ -238,6 +357,17 @@ export function ItemsSheet({
             {Array.from({ length: free }, (_, i) => (
               <div key={`free-${i}`} className="slot free" />
             ))}
+
+            {Array.from({ length: lockedCount }, (_, i) => (
+              <div
+                key={`locked-${i}`}
+                className="slot locked"
+                aria-hidden
+                title="Locked until upgrade"
+              >
+                <span className="lk">▿</span>
+              </div>
+            ))}
           </div>
 
           <div className="detail">
@@ -323,9 +453,9 @@ export function ItemsSheet({
                   )}
                 {selectedDef.tags.length > 0 && (
                   <div className="tags">
-                    {selectedDef.tags.map(([kind, label]) => (
-                      <span key={label} className={`tag ${kind}`}>
-                        {label}
+                    {selectedDef.tags.map(([kind, tagLabel]) => (
+                      <span key={tagLabel} className={`tag ${kind}`}>
+                        {tagLabel}
                       </span>
                     ))}
                   </div>

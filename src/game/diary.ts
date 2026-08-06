@@ -253,6 +253,42 @@ function craftText(
   return text;
 }
 
+function storageUpgradeText(
+  rng: () => number,
+  name: string,
+  slots: number,
+): string {
+  const n = name.toLowerCase();
+  const openings = [
+    () => `Finished the ${n}. ${Capital(numWord(slots))} things now, instead of ${numWord(slots - 4)}.`,
+    () =>
+      slots === 12
+        ? `Finished the satchel. Twelve things now, instead of eight.`
+        : slots === 16
+          ? `The crate holds sixteen. That is four more decisions I do not have to make.`
+          : `The storage box takes twenty. Room enough to stop choosing what to leave.`,
+    () =>
+      `Built the ${n}. ${Capital(numWord(slots))} slots where there were ${numWord(slots - 4)}.`,
+    () =>
+      `The ${n} is done. Capacity: ${slots}. That is the whole point.`,
+    () =>
+      `Switched to the ${n}. ${slots} places to put a thing.`,
+    () =>
+      `Finished upgrading. ${Capital(numWord(slots))} slots now.`,
+  ];
+  return pick(rng, openings)();
+}
+
+function numWord(n: number): string {
+  const words: Record<number, string> = {
+    8: "eight",
+    12: "twelve",
+    16: "sixteen",
+    20: "twenty",
+  };
+  return words[n] ?? String(n);
+}
+
 function cookText(
   rng: () => number,
   cookedId: string,
@@ -352,6 +388,8 @@ export function writeActivityDiary(
     kind: ActivityKind;
     durationId?: DurationId;
     recipeName?: string;
+    /** When set, diary uses storage-upgrade lines (no deltas). */
+    storageSlots?: number;
     cookItemId?: string;
     toolId?: string;
     toolBroke?: boolean;
@@ -376,6 +414,12 @@ export function writeActivityDiary(
       args.kept,
       args.lost,
       !!args.toolBroke,
+    );
+  } else if (args.kind === "craft" && args.storageSlots != null) {
+    text = storageUpgradeText(
+      rng,
+      args.recipeName ?? "store",
+      args.storageSlots,
     );
   } else if (args.kind === "craft") {
     text = craftText(rng, args.recipeName ?? "thing", args.kept, args.lost);

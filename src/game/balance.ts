@@ -83,11 +83,79 @@ export function storageSlotCount(
 }
 
 export const LOCK_HINT: Record<StorageTierId, string> = {
-  sand: "Craft a satchel",
-  satchel: "Build a wooden box",
-  wooden: "Build a storage box",
+  sand: "Upgrade to a satchel",
+  satchel: "Upgrade to a wooden box",
+  wooden: "Upgrade to a storage box",
   storage: "Supporter · +5",
 };
+
+/** Sequential storage upgrades — started from the items page, not Build. */
+export type StorageUpgrade = {
+  recipeId: "satchel" | "wooden_box" | "storage_box";
+  from: StorageTierId;
+  to: StorageTierId;
+  /** Title-case name for the strip / diary. */
+  name: string;
+  /** Base slot count of the destination tier (supporter bonus sits on top). */
+  slots: number;
+  timeMs: number;
+  cost: { itemId: string; qty: number }[];
+  iconId: string;
+};
+
+export const STORAGE_UPGRADES: StorageUpgrade[] = [
+  {
+    recipeId: "satchel",
+    from: "sand",
+    to: "satchel",
+    name: "Satchel",
+    slots: 12,
+    timeMs: 10 * 60_000,
+    cost: [
+      { itemId: "plant_fiber", qty: 6 },
+      { itemId: "string", qty: 2 },
+    ],
+    iconId: "satchel",
+  },
+  {
+    recipeId: "wooden_box",
+    from: "satchel",
+    to: "wooden",
+    name: "Wooden Box",
+    slots: 16,
+    timeMs: 20 * 60_000,
+    cost: [
+      { itemId: "wood", qty: 8 },
+      { itemId: "string", qty: 2 },
+    ],
+    iconId: "wooden_box",
+  },
+  {
+    recipeId: "storage_box",
+    from: "wooden",
+    to: "storage",
+    name: "Storage Box",
+    slots: 20,
+    timeMs: 90 * 60_000,
+    cost: [
+      { itemId: "wood", qty: 12 },
+      { itemId: "metal_scrap", qty: 4 },
+    ],
+    iconId: "storage_box",
+  },
+];
+
+export function storageUpgradeFrom(
+  tier: StorageTierId,
+): StorageUpgrade | null {
+  return STORAGE_UPGRADES.find((u) => u.from === tier) ?? null;
+}
+
+export function storageUpgradeByRecipeId(
+  recipeId: string,
+): StorageUpgrade | null {
+  return STORAGE_UPGRADES.find((u) => u.recipeId === recipeId) ?? null;
+}
 
 /** Starting kit for a new run — empty by default. */
 export const STARTING_INVENTORY: { itemId: string; qty: number }[] = [];
@@ -405,6 +473,8 @@ export type RecipeId =
   | "fishing_stick"
   | "simple_fireplace"
   | "satchel"
+  | "wooden_box"
+  | "storage_box"
   | "tool_rack"
   | "palm_frond_mat"
   | "log_chair"
@@ -425,7 +495,6 @@ export type Recipe = {
   tool?: string;
   result?: { itemId: string; qty: number };
   effect?:
-    | "satchel"
     | "tool_rack"
     | "simple_fireplace"
     | "mat"
@@ -524,18 +593,6 @@ export const RECIPES: Recipe[] = [
     timeMs: 3 * 60_000,
     cost: [{ itemId: "wood", qty: 3 }],
     effect: "simple_fireplace",
-  },
-  {
-    id: "satchel",
-    name: "Satchel",
-    timeMs: 10 * 60_000,
-    cost: [
-      { itemId: "plant_fiber", qty: 6 },
-      { itemId: "string", qty: 2 },
-    ],
-    result: { itemId: "satchel", qty: 1 },
-    effect: "satchel",
-    band: "medium",
   },
   {
     id: "tool_rack",

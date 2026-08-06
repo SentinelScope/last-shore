@@ -913,6 +913,42 @@ svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .crateTop h1{font-family:var(--font-display),Georgia,serif;font-weight:400;font-size:19px;color:#F0E6D6}
 .crateTop .cap{margin-top:3px;font-size:9px;letter-spacing:.2em;text-transform:uppercase;
   color:#C4AE90}
+.storage-upgrade{
+  flex:none;padding:8px 18px 10px;
+  background:linear-gradient(#5A4634,#4A3A2A);
+  border-left:1px solid #3A2C1E;border-right:1px solid #3A2C1E
+}
+.storage-upgrade-row{
+  display:flex;align-items:center;gap:10px
+}
+.storage-upgrade-icon{
+  width:36px;height:36px;object-fit:contain;flex:none;opacity:.92
+}
+.storage-upgrade-copy{
+  flex:1;min-width:0;display:flex;flex-direction:column;gap:2px
+}
+.storage-upgrade-copy strong{
+  font-size:10px;letter-spacing:.12em;font-weight:500;color:#F0E6D6
+}
+.storage-upgrade-copy > span{
+  font-size:10px;line-height:1.35;color:#C4AE90
+}
+.storage-upgrade-copy .short{color:#FFB25C}
+.storage-upgrade-go{
+  flex:none;font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  padding:8px 11px;border-radius:2px;cursor:pointer;
+  border:1px solid rgba(255,178,92,.45);background:rgba(255,178,92,.12);color:#FFC98A
+}
+.storage-upgrade-go:disabled{
+  opacity:.45;cursor:default;border-color:rgba(196,174,144,.3);
+  background:rgba(0,0,0,.18);color:#C4AE90
+}
+.storage-upgrade-timer,.storage-upgrade-max{
+  margin:0;font-size:11px;line-height:1.4;color:#C4AE90;text-align:center
+}
+.storage-upgrade-reason{
+  margin:6px 0 0;font-size:10px;color:#FFB25C;text-align:center
+}
 .tiers{display:flex;gap:3px;margin-top:11px}
 .tiers span{flex:1;text-align:center;font-size:8px;letter-spacing:.08em;text-transform:uppercase;
   padding:4px 2px;border-radius:2px;background:rgba(0,0,0,.22);color:#A8927A}

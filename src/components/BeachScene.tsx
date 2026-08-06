@@ -5,9 +5,11 @@ import {
   activityChipLabel,
   clearPendingResults,
   canStartActivity,
+  canStartStorageUpgrade,
   formatRemaining,
   startActivity,
   startCraft,
+  startStorageUpgrade,
 } from "@/game/activities";
 import {
   wearClothing,
@@ -1108,6 +1110,8 @@ export function BeachScene() {
             open={itemsOpen}
             inventory={save.inventory}
             storageTier={save.storageTier}
+            activity={save.activity}
+            now={now}
             recoveredDocuments={save.recoveredDocuments}
             onDocumentRead={(n) => {
               const next = {
@@ -1121,6 +1125,13 @@ export function BeachScene() {
             onEat={onEat}
             onDestroy={onDestroy}
             onWear={onWear}
+            onStorageUpgrade={() => {
+              const gate = canStartStorageUpgrade(save);
+              if (!gate.ok) return gate.reason;
+              const next = startStorageUpgrade(save, Date.now());
+              commitSave(next);
+              return null;
+            }}
           />
 
           <CraftSheet

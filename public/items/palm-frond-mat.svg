@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-<polygon points="32,14 60,34 32,54 4,34" fill="#9E8A5C"/>
-<polygon points="32,14 60,34 32,44 4,34" fill="#C9B584"/>
-<g stroke="#6E5E3C" stroke-width="1.4" opacity=".65">
-<path d="M18 24L46 44"/><path d="M25 19L53 39"/><path d="M11 29L39 49"/>
-<path d="M46 24L18 44"/><path d="M39 19L11 39"/><path d="M53 29L25 49"/></g>
-<polygon points="32,14 60,34 32,54 4,34" fill="none" stroke="#5E7A50" stroke-width="2.4"/></svg>

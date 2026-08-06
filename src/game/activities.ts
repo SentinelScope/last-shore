@@ -10,6 +10,8 @@ import {
   FISH_SIZE_WEIGHTS,
   RECIPES,
   SCOUR_TABLE,
+  storageUpgradeByRecipeId,
+  storageUpgradeFrom,
   type ActivityKind,
   type CutTool,
   type DurationId,
@@ -46,6 +48,7 @@ import {
 } from "./tools";
 
 export { bestCutTool, bestFishingTool } from "./tools";
+export { storageUpgradeFrom } from "./balance";
 
 export function canStartActivity(
   state: SaveState,
@@ -120,9 +123,6 @@ export function canStartCraft(
   ) {
     return { ok: false, reason: "Fireplace already built." };
   }
-  if (recipe.effect === "satchel" && state.storageTier !== "sand") {
-    return { ok: false, reason: "Already using a better store." };
-  }
   if (recipe.effect === "tool_rack" && state.hasToolRack) {
     return { ok: false, reason: "Tool rack already built." };
   }
@@ -189,6 +189,68 @@ export function startCraft(
       endsAt: now + recipe.timeMs,
     },
   };
+}
+
+export function canStartStorageUpgrade(
+  state: SaveState,
+): { ok: true } | { ok: false; reason: string } {
+  const busy = canStartActivity(state, "craft");
+  if (!busy.ok) return busy;
+  const upgrade = storageUpgradeFrom(state.storageTier);
+  if (!upgrade) {
+    return { ok: false, reason: "Nothing bigger washes up here." };
+  }
+  const missing = missingCosts(state.inventory, upgrade.cost);
+  if (missing.length > 0) {
+    return { ok: false, reason: "Not enough." };
+  }
+  return { ok: true };
+}
+
+/** Consume materials and start the storage upgrade on the player channel. */
+export function startStorageUpgrade(state: SaveState, now: number): SaveState {
+  const gate = canStartStorageUpgrade(state);
+  if (!gate.ok) return state;
+  const upgrade = storageUpgradeFrom(state.storageTier);
+  if (!upgrade) return state;
+  const inventory = removeItems(state.inventory, upgrade.cost);
+  if (!inventory) return state;
+
+  return {
+    ...state,
+    inventory,
+    activity: {
+      kind: "craft",
+      recipeId: upgrade.recipeId,
+      startedAt: now,
+      endsAt: now + upgrade.timeMs,
+    },
+  };
+}
+
+function resolveStorageUpgrade(state: SaveState, now: number): SaveState {
+  const activity = state.activity;
+  if (!activity?.recipeId) return state;
+  const upgrade = storageUpgradeByRecipeId(activity.recipeId);
+  if (!upgrade) {
+    return { ...state, activity: null };
+  }
+
+  const next: SaveState = {
+    ...state,
+    activity: null,
+    storageTier: upgrade.to,
+    pendingResults: null,
+    pendingOverflow: null,
+  };
+  return writeActivityDiary(next, {
+    kind: "craft",
+    recipeName: upgrade.name,
+    storageSlots: upgrade.slots,
+    kept: [],
+    lost: [],
+    at: now,
+  });
 }
 
 function rollScourLoot(
@@ -334,9 +396,6 @@ function resolveCraft(state: SaveState, now: number): SaveState {
     }
   }
 
-  if (recipe.effect === "satchel") {
-    storageTier = "satchel";
-  }
   if (recipe.effect === "tool_rack") {
     hasToolRack = true;
   }
@@ -473,7 +532,11 @@ export function resolveActivityIfDue(state: SaveState, now: number): SaveState {
   const activity = s.activity;
   if (activity && now >= activity.endsAt) {
     if (activity.kind === "craft") {
-      s = resolveCraft(s, now);
+      if (activity.recipeId && storageUpgradeByRecipeId(activity.recipeId)) {
+        s = resolveStorageUpgrade(s, now);
+      } else {
+        s = resolveCraft(s, now);
+      }
     } else {
       const loot = rollActivityLoot(activity, s.seed);
       let toolBroke = false;
@@ -562,6 +625,10 @@ export function activityChipLabel(
   now: number,
 ): string {
   if (activity.kind === "craft" && activity.recipeId) {
+    const upgrade = storageUpgradeByRecipeId(activity.recipeId);
+    if (upgrade) {
+      return `Building the ${upgrade.name.toLowerCase()} · ${formatRemaining(activity.endsAt, now)}`;
+    }
     const recipe = RECIPES.find((r) => r.id === activity.recipeId);
     return `Crafting ${recipe?.name ?? "…"} · ${formatRemaining(activity.endsAt, now)}`;
   }

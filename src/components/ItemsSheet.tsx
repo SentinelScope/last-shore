@@ -267,7 +267,7 @@ export function ItemsSheet({
             {!runningUpgrade &&
               (upgradeReason || (!busyGate.ok && ready)) && (
                 <p className="storage-upgrade-reason">
-                  {upgradeReason ?? busyGate.reason}
+                  {upgradeReason ?? (!busyGate.ok ? busyGate.reason : null)}
                 </p>
               )}
           </div>

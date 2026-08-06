@@ -357,7 +357,7 @@ function resolveCraft(state: SaveState, now: number): SaveState {
   }
 
   let inventory = state.inventory;
-  let storageTier = state.storageTier;
+  const storageTier = state.storageTier;
   let fireplace = state.fireplace;
   let bedTier = state.bedTier;
   let hasLogChair = state.hasLogChair;
